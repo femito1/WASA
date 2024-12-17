@@ -1,9 +1,10 @@
 package api
 
 import (
-	"github.com/femito1/WASA/tree/main/service/api/reqcontext"
-	"github.com/julienschmidt/httprouter"
 	"net/http"
+
+	"github.com/femito1/WASA/service/api/reqcontext"
+	"github.com/julienschmidt/httprouter"
 )
 
 // getContextReply is an example of HTTP endpoint that returns "Hello World!" as a plain text. The signature of this

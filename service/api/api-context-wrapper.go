@@ -1,11 +1,12 @@
 package api
 
 import (
-	"github.com/femito1/WASA/tree/main/service/api/reqcontext"
+	"net/http"
+
+	"github.com/femito1/WASA/service/api/reqcontext"
 	"github.com/gofrs/uuid"
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
-	"net/http"
 )
 
 // httpRouterHandler is the signature for functions that accepts a reqcontext.RequestContext in addition to those

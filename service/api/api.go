@@ -38,10 +38,11 @@ package api
 
 import (
 	"errors"
-	"github.com/femito1/WASA/tree/main/service/database"
+	"net/http"
+
+	"github.com/femito1/WASA/service/database"
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
-	"net/http"
 )
 
 // Config is used to provide dependencies and configuration to the New function.
