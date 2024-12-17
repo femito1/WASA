@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@ibm-cloud/openapi-ruleset": "^1.25.1"
+  }
+}
