@@ -1,0 +1,7 @@
+services:
+    db:
+      environment:
+        - MYSQL_ROOT_PASSWORD=root
+      image: x
+      ports:
+        - 3306:3306
