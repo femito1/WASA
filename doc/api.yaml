@@ -5,6 +5,8 @@ info:
   description: "Messaging App"
   version: 1.0.0
 
+security:
+- bearerAuth: []
 tags:
 - name: "login"
   description: "Operations related to user login"
@@ -18,7 +20,15 @@ tags:
   description: "Operations related to comments"
 
 components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
+
     Reaction:
       title: Reaction
       description: "Represents an emoji reaction to a message."
@@ -137,6 +147,7 @@ components:
       required: [ "error" ]
 
   parameters:
+
     userId:
       schema:
         type: integer
@@ -145,6 +156,7 @@ components:
       in: path
       required: true
       description: "User Identifier"
+
     conversationId:
       schema:
         type: integer
@@ -153,6 +165,7 @@ components:
       in: path
       required: true
       description: "Conversation Identifier"
+
     messageId:
       schema:
         type: integer
