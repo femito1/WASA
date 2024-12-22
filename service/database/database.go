@@ -36,11 +36,16 @@ import (
 	"fmt"
 )
 
+var ErrUserDoesNotExist = errors.New("User does not exist")
+
+type User struct {
+	Id       uint64 `json:"id"`
+	Username string `json:"username"`
+}
+
 // AppDatabase is the high level interface for the DB
 type AppDatabase interface {
-	GetName() (string, error)
-	SetName(name string) error
-
+	CreateUser(User) (User, error)
 	Ping() error
 }
 
@@ -55,12 +60,21 @@ func New(db *sql.DB) (AppDatabase, error) {
 		return nil, errors.New("database is required when building a AppDatabase")
 	}
 
+	// Enable foreign keys
+	_, err := db.Exec("PRAGMA foreign_keys = ON")
+	if err != nil {
+		return nil, err
+	}
+
 	// Check if table exists. If not, the database is empty, and we need to create the structure
 	var tableName string
-	err := db.QueryRow(`SELECT name FROM sqlite_master WHERE type='table' AND name='example_table';`).Scan(&tableName)
+	err = db.QueryRow(`SELECT name FROM sqlite_master WHERE type='table' AND name='example_table';`).Scan(&tableName)
 	if errors.Is(err, sql.ErrNoRows) {
-		sqlStmt := `CREATE TABLE example_table (id INTEGER NOT NULL PRIMARY KEY, name TEXT);`
-		_, err = db.Exec(sqlStmt)
+		usersDatabase := `CREATE TABLE users (
+			Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+			Username TEXT NOT NULL UNIQUE
+			);`
+		_, err = db.Exec(usersDatabase)
 		if err != nil {
 			return nil, fmt.Errorf("error creating database structure: %w", err)
 		}
