@@ -7,6 +7,7 @@ info:
 
 security:
 - bearerAuth: []
+
 tags:
 - name: "login"
   description: "Operations related to user login"
@@ -20,7 +21,6 @@ tags:
   description: "Operations related to comments"
 
 components:
-
   securitySchemes:
     bearerAuth:
       type: http
@@ -147,7 +147,6 @@ components:
       required: [ "error" ]
 
   parameters:
-
     userId:
       schema:
         type: integer
@@ -350,7 +349,6 @@ paths:
                 $ref: "#/components/schemas/Error"
 
   /user/{id}/conversations:
-
     parameters:
     - $ref: '#/components/parameters/userId'
     post:
@@ -399,6 +397,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+
     get:
       tags: [ "conversations" ]
       summary: "Get all conversations that include the user"
@@ -460,6 +459,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+
     post:
       tags: [ "messages" ]
       summary: "Send a message"
@@ -502,22 +502,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    # REMOVED the old delete operation that used query param `msgId`
+
+  /user/{id}/conversations/{convId}/messages:
+    parameters:
+    - $ref: '#/components/parameters/userId'
+    - $ref: '#/components/parameters/conversationId'
+    # This path could also be used for listing all messages in a conversation (GET)
+    # or adding a new message (POST), if you wanted a classic REST "collection" approach.
+
+  /user/{id}/conversations/{convId}/messages/{msgId}:
+    parameters:
+    - $ref: '#/components/parameters/userId'
+    - $ref: '#/components/parameters/conversationId'
+    - $ref: '#/components/parameters/messageId'
     delete:
       tags: [ "messages" ]
-      summary: "Delete the most recent message or a specified message"
-      description: "Deletes either the most recent message in the conversation or a specific message if msgId is provided."
+      summary: "Delete a message"
+      description: "Deletes the specified message from the conversation."
       operationId: deleteMessage
-      parameters:
-      - name: msgId
-        in: query
-        description: "If provided, delete this specific message"
-        schema:
-          type: integer
       responses:
         "204":
           description: "Message Deleted"
         "400":
-          description: "Bad Request - no messageId and no recent message"
+          description: "Bad Request"
           content:
             application/json:
               schema:
