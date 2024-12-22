@@ -255,7 +255,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /user/{id}:
+  /users/{id}:
     parameters:
     - $ref: "#/components/parameters/userId"
     put:
@@ -304,7 +304,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /user/{id}/photo:
+  /users/{id}/photo:
     parameters:
     - $ref: "#/components/parameters/userId"
     put:
@@ -348,7 +348,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /user/{id}/conversations:
+  /users/{id}/conversations:
     parameters:
     - $ref: '#/components/parameters/userId'
     post:
@@ -421,7 +421,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /user/{id}/conversations/{convId}:
+  /users/{id}/conversations/{convId}:
     parameters:
     - $ref: '#/components/parameters/userId'
     - $ref: '#/components/parameters/conversationId'
@@ -459,7 +459,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    # Removed the POST here that sent messages
 
+  /users/{id}/conversations/{convId}/messages:
+    parameters:
+    - $ref: '#/components/parameters/userId'
+    - $ref: '#/components/parameters/conversationId'
     post:
       tags: [ "messages" ]
       summary: "Send a message"
@@ -488,8 +493,12 @@ paths:
                   maxLength: 10
               required: [ "content", "format" ]
       responses:
-        "204":
-          description: "Message Sent successfully"
+        "201":
+          description: "Message created"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
         "400":
           description: "Bad request (e.g., missing content)"
           content:
@@ -502,16 +511,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-    # REMOVED the old delete operation that used query param `msgId`
 
-  /user/{id}/conversations/{convId}/messages:
-    parameters:
-    - $ref: '#/components/parameters/userId'
-    - $ref: '#/components/parameters/conversationId'
-    # This path could also be used for listing all messages in a conversation (GET)
-    # or adding a new message (POST), if you wanted a classic REST "collection" approach.
-
-  /user/{id}/conversations/{convId}/messages/{msgId}:
+  /users/{id}/conversations/{convId}/messages/{msgId}:
     parameters:
     - $ref: '#/components/parameters/userId'
     - $ref: '#/components/parameters/conversationId'
@@ -537,7 +538,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /user/{id}/conversations/{convId}/messages/{msgId}/forward:
+  /users/{id}/conversations/{convId}/messages/{msgId}/forward:
     parameters:
     - $ref: '#/components/parameters/userId'
     - $ref: '#/components/parameters/conversationId'
@@ -575,7 +576,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /user/{id}/conversations/{convId}/messages/{msgId}/comment:
+  /users/{id}/conversations/{convId}/messages/{msgId}/comment:
     parameters:
     - $ref: '#/components/parameters/userId'
     - $ref: '#/components/parameters/conversationId'
@@ -626,7 +627,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /user/{id}/conversations/{convId}/messages/{msgId}/comment/{commentId}:
+  /users/{id}/conversations/{convId}/messages/{msgId}/comment/{commentId}:
     parameters:
     - $ref: '#/components/parameters/userId'
     - $ref: '#/components/parameters/conversationId'
@@ -652,7 +653,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /user/{id}/conversations/{convId}/members:
+  /users/{id}/conversations/{convId}/members:
     parameters:
     - $ref: '#/components/parameters/userId'
     - $ref: '#/components/parameters/conversationId'
@@ -714,7 +715,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /user/{id}/conversations/{convId}/name:
+  /users/{id}/conversations/{convId}/name:
     parameters:
     - $ref: '#/components/parameters/userId'
     - $ref: '#/components/parameters/conversationId'
@@ -758,7 +759,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /user/{id}/conversations/{convId}/photo:
+  /users/{id}/conversations/{convId}/photo:
     parameters:
     - $ref: '#/components/parameters/userId'
     - $ref: '#/components/parameters/conversationId'
