@@ -2,57 +2,145 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/femito1/WASA/service/api/reqcontext"
+	"github.com/femito1/WASA/service/database"
 	"github.com/julienschmidt/httprouter"
 )
 
+// doLogin handles POST /session.
+// It decodes a JSON payload with { "name": string }, creates (or finds) the user in the database,
+// and returns { "identifier": string } where the identifier is the user's unique ID.
 func (rt *_router) doLogin(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	var user User
-	err := json.NewDecoder(r.Body).Decode(&user)
+	// Create the user (or return the existing user)
+	dbUser, err := rt.db.CreateUser(database.User{
+		Username: req.Name,
+	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	dbuser, err := rt.db.CreateUser(user.ToDatabase())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	user.FromDatabase(dbuser)
+
+	// Return the identifier as a string (using the user id)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(user)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"identifier": fmt.Sprintf("%d", dbUser.Id),
+	})
 }
 
+// listUsers handles GET /users.
+// It accepts an optional query parameter "name" for filtering and returns an array of users.
 func (rt *_router) listUsers(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
-	return
-}
+	nameFilter := r.URL.Query().Get("name")
+	dbUsers, err := rt.db.ListUsers(nameFilter)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-func (rt *_router) setMyUserName(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
-	var user User
-	username := ps.ByName("username")
-	err := json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	// Convert database users to API users.
+	apiUsers := make([]User, len(dbUsers))
+	for i, u := range dbUsers {
+		var user User
+		user.FromDatabase(u)
+		apiUsers[i] = user
 	}
-	token := getToken(r.Header.Get("Authorization"))
-	user.Id = token
-	dbuser, err := rt.db.SetUsername(user.ToDatabase(), username)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	user.FromDatabase(dbuser)
+
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(user)
-
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(apiUsers)
 }
 
-func (rt *_router) setMyPhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+// setMyUserName handles PUT /users/:id.
+// It expects a JSON payload with { "newName": string } and updates the user's username.
+func (rt *_router) setMyUserName(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+	var req struct {
+		NewName string `json:"newName"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
+	// Extract the user ID from the path parameter.
+	idStr := ps.ByName("id")
+	userId, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+
+	// Fetch the current user from the database.
+	dbUser, err := rt.db.CheckUserById(database.User{Id: userId})
+	if err != nil {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+
+	// Update the username.
+	updatedUser, err := rt.db.SetUsername(dbUser, req.NewName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return the updated user.
+	var user User
+	user.FromDatabase(updatedUser)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(user)
+}
+
+// setMyPhoto handles PUT /users/:id/photo.
+// It expects a JSON payload with { "newPic": string } and updates the user's profile picture.
+func (rt *_router) setMyPhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+	var req struct {
+		NewPic string `json:"newPic"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Extract the user ID from the path parameter.
+	idStr := ps.ByName("id")
+	userId, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+
+	// Fetch the current user from the database.
+	dbUser, err := rt.db.CheckUserById(database.User{Id: userId})
+	if err != nil {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+
+	// Update the profile picture.
+	updatedUser, err := rt.db.SetPhoto(dbUser, req.NewPic)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return the updated user.
+	var user User
+	user.FromDatabase(updatedUser)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(user)
 }
