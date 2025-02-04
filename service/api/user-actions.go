@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -32,12 +31,20 @@ func (rt *_router) doLogin(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 
-	// Return the identifier as a string (using the user id)
+	// Generate a JWT token for the user.
+	token, err := GenerateToken(dbUser.Id)
+	if err != nil {
+		http.Error(w, "error generating token", http.StatusInternalServerError)
+		return
+	}
+
+	// Return the token as the identifier.
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(map[string]string{
-		"identifier": fmt.Sprintf("%d", dbUser.Id),
+		"identifier": token,
 	})
+
 }
 
 // listUsers handles GET /users.
@@ -82,6 +89,19 @@ func (rt *_router) setMyUserName(w http.ResponseWriter, r *http.Request, ps http
 		return
 	}
 
+	// Extract the user ID from the bearer token.
+	tokenUserID, err := ExtractUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Ensure that the token's user ID matches the URL's user ID.
+	if tokenUserID != userId {
+		http.Error(w, "forbidden: you cannot update another user's details", http.StatusForbidden)
+		return
+	}
+
 	// Fetch the current user from the database.
 	dbUser, err := rt.db.CheckUserById(database.User{Id: userId})
 	if err != nil {
@@ -120,6 +140,19 @@ func (rt *_router) setMyPhoto(w http.ResponseWriter, r *http.Request, ps httprou
 	userId, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+
+	// Extract the user ID from the bearer token.
+	tokenUserID, err := ExtractUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Ensure that the token's user ID matches the URL's user ID.
+	if tokenUserID != userId {
+		http.Error(w, "forbidden: you cannot update another user's details", http.StatusForbidden)
 		return
 	}
 

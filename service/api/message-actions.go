@@ -20,6 +20,20 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		http.Error(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
+
+	// Extract the user ID from the bearer token.
+	tokenUserID, err := ExtractUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Ensure that the token's user ID matches the URL's user ID.
+	if tokenUserID != userId {
+		http.Error(w, "forbidden: you cannot update another user's details", http.StatusForbidden)
+		return
+	}
+
 	convId, err := strconv.ParseUint(convIdStr, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid conversation id", http.StatusBadRequest)
@@ -59,6 +73,20 @@ func (rt *_router) deleteMessage(w http.ResponseWriter, r *http.Request, ps http
 		http.Error(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
+
+	// Extract the user ID from the bearer token.
+	tokenUserID, err := ExtractUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Ensure that the token's user ID matches the URL's user ID.
+	if tokenUserID != userId {
+		http.Error(w, "forbidden: you cannot update another user's details", http.StatusForbidden)
+		return
+	}
+
 	convId, err := strconv.ParseUint(convIdStr, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid conversation id", http.StatusBadRequest)
@@ -93,6 +121,20 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 		http.Error(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
+
+	// Extract the user ID from the bearer token.
+	tokenUserID, err := ExtractUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Ensure that the token's user ID matches the URL's user ID.
+	if tokenUserID != userId {
+		http.Error(w, "forbidden: you cannot update another user's details", http.StatusForbidden)
+		return
+	}
+
 	convId, err := strconv.ParseUint(convIdStr, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid conversation id", http.StatusBadRequest)
