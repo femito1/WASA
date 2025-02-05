@@ -11,9 +11,10 @@ type Conversation struct {
 
 // Message represents a message in a conversation.
 type Message struct {
-	Id             uint64     `json:"id"`
 	ConversationId uint64     `json:"-"`
+	Id             uint64     `json:"id"`
 	SenderId       uint64     `json:"senderId"`
+	SenderName     string     `json:"senderName,omitempty"` // NEW field to hold the sender's username.
 	Content        string     `json:"content"`
 	Format         string     `json:"format"`
 	State          string     `json:"state"`
@@ -24,13 +25,14 @@ type Message struct {
 // Reaction represents an emoji reaction to a message.
 type Reaction struct {
 	Emoji string `json:"emoji"`
+	Count int    `json:"count,omitempty"` // Count of this reaction (aggregated)
 }
 
-// Comment represents a comment on a message.
 type Comment struct {
 	Id          uint64 `json:"id"`
 	MessageId   uint64 `json:"messageId"`
 	UserId      uint64 `json:"userId"`
 	CommentText string `json:"commentText"`
 	Timestamp   string `json:"timestamp,omitempty"`
+	SenderName  string `json:"senderName,omitempty"` // ADDED: sender's username
 }

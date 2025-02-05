@@ -3,7 +3,10 @@ package database
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 )
+
+var ErrConversationNotFound = errors.New("conversation not found")
 
 // getConversationMembers retrieves the members of a conversation.
 func (db *appdbimpl) getConversationMembers(convId uint64) ([]User, error) {
@@ -30,13 +33,13 @@ func (db *appdbimpl) getConversationMembers(convId uint64) ([]User, error) {
 	return members, nil
 }
 
-// getConversationMessages retrieves the messages for a conversation.
 func (db *appdbimpl) getConversationMessages(convId uint64) ([]Message, error) {
 	query := `
-	SELECT id, sender_id, content, format, state, timestamp
-	FROM messages
-	WHERE conversation_id = ?
-	ORDER BY timestamp ASC
+		SELECT m.id, m.sender_id, u.username, m.content, m.format, m.state, m.timestamp
+		FROM messages m
+		JOIN users u ON m.sender_id = u.id
+		WHERE m.conversation_id = ?
+		ORDER BY m.timestamp ASC
 	`
 	rows, err := db.c.Query(query, convId)
 	if err != nil {
@@ -47,42 +50,28 @@ func (db *appdbimpl) getConversationMessages(convId uint64) ([]Message, error) {
 	var messages []Message
 	for rows.Next() {
 		var m Message
-		if err := rows.Scan(&m.Id, &m.SenderId, &m.Content, &m.Format, &m.State, &m.Timestamp); err != nil {
+		err = rows.Scan(&m.Id, &m.SenderId, &m.SenderName, &m.Content, &m.Format, &m.State, &m.Timestamp)
+		if err != nil {
 			return nil, err
 		}
-		// Load reactions for the message.
+		// Load reactions (if applicable).
 		m.Reactions, err = db.getMessageReactions(m.Id)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, err
 		}
 		messages = append(messages, m)
 	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
 	return messages, nil
-}
-
-// getMessageReactions retrieves the reactions for a message.
-func (db *appdbimpl) getMessageReactions(msgId uint64) ([]Reaction, error) {
-	query := `SELECT emoji FROM reactions WHERE message_id = ?`
-	rows, err := db.c.Query(query, msgId)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var reactions []Reaction
-	for rows.Next() {
-		var r Reaction
-		if err := rows.Scan(&r.Emoji); err != nil {
-			return nil, err
-		}
-		reactions = append(reactions, r)
-	}
-	return reactions, nil
 }
 
 // CreateConversation creates a new conversation with an optional initial set of members.
 func (db *appdbimpl) CreateConversation(creator User, convName string, members []uint64) (Conversation, error) {
 	var conv Conversation
+
+	// Create the conversation.
 	res, err := db.c.Exec("INSERT INTO conversations(name, picture) VALUES (?, ?)", convName, "")
 	if err != nil {
 		return conv, err
@@ -95,24 +84,29 @@ func (db *appdbimpl) CreateConversation(creator User, convName string, members [
 	conv.Name = convName
 	conv.Picture = ""
 
-	// Insert creator.
+	// IMPORTANT: Always add the creator to the conversation members.
 	_, err = db.c.Exec("INSERT INTO conversation_members(conversation_id, user_id) VALUES (?, ?)", conv.Id, creator.Id)
 	if err != nil {
 		return conv, err
 	}
-	// Insert additional members (using INSERT OR IGNORE to avoid duplicates).
+
+	// Add additional members, if any.
 	for _, uid := range members {
 		_, err = db.c.Exec("INSERT OR IGNORE INTO conversation_members(conversation_id, user_id) VALUES (?, ?)", conv.Id, uid)
 		if err != nil {
 			return conv, err
 		}
 	}
-	// Load members and messages.
+
+	// Load the conversation members.
 	conv.Members, err = db.getConversationMembers(conv.Id)
 	if err != nil {
 		return conv, err
 	}
+
+	// Initialize the messages slice.
 	conv.Messages = []Message{}
+
 	return conv, nil
 }
 
@@ -152,33 +146,50 @@ func (db *appdbimpl) GetConversations(userId uint64) ([]Conversation, error) {
 
 // GetConversation retrieves a specific conversation if the user is a member.
 // If conversationName is provided, it must match the conversation's name.
-func (db *appdbimpl) GetConversation(userId, convId uint64, conversationName *string) (Conversation, error) {
+func (db *appdbimpl) GetConversation(userID, convID uint64, conversationName *string) (Conversation, error) {
 	var conv Conversation
+
+	// Retrieve the conversation info.
 	query := "SELECT id, name, picture FROM conversations WHERE id = ?"
-	row := db.c.QueryRow(query, convId)
+	row := db.c.QueryRow(query, convID)
 	if err := row.Scan(&conv.Id, &conv.Name, &conv.Picture); err != nil {
-		return conv, err
+		if err == sql.ErrNoRows {
+			return conv, ErrConversationNotFound
+		}
+		return conv, fmt.Errorf("error scanning conversation: %w", err)
 	}
+
+	// Optionally, verify the conversation name if provided.
 	if conversationName != nil && conv.Name != *conversationName {
-		return conv, errors.New("conversation name does not match")
+		return conv, fmt.Errorf("conversation name mismatch")
 	}
-	// Verify membership.
-	var count int
-	err := db.c.QueryRow("SELECT COUNT(*) FROM conversation_members WHERE conversation_id = ? AND user_id = ?", convId, userId).Scan(&count)
+
+	// Load conversation members.
+	members, err := db.getConversationMembers(convID)
 	if err != nil {
-		return conv, err
+		return conv, fmt.Errorf("error loading conversation members: %w", err)
 	}
-	if count == 0 {
-		return conv, errors.New("user is not a member of the conversation")
+	conv.Members = members
+
+	// Verify that the requesting user is a member.
+	memberFound := false
+	for _, member := range members {
+		if member.Id == userID {
+			memberFound = true
+			break
+		}
 	}
-	conv.Members, err = db.getConversationMembers(convId)
+	if !memberFound {
+		return conv, errors.New("user is not a member of this conversation")
+	}
+
+	// Load conversation messages.
+	messages, err := db.getConversationMessages(convID)
 	if err != nil {
-		return conv, err
+		return conv, fmt.Errorf("error loading conversation messages: %w", err)
 	}
-	conv.Messages, err = db.getConversationMessages(convId)
-	if err != nil {
-		return conv, err
-	}
+	conv.Messages = messages
+
 	return conv, nil
 }
 

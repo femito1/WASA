@@ -97,43 +97,41 @@ func (rt *_router) getMyConversations(w http.ResponseWriter, r *http.Request, ps
 func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 	userIdStr := ps.ByName("id")
 	convIdStr := ps.ByName("convId")
-	userId, err := strconv.ParseUint(userIdStr, 10, 64)
+
+	userID, err := strconv.ParseUint(userIdStr, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
 
-	// Extract the user ID from the bearer token.
-	tokenUserID, err := ExtractUserIDFromToken(r)
-	if err != nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Ensure that the token's user ID matches the URL's user ID.
-	if tokenUserID != userId {
-		http.Error(w, "forbidden: you cannot update another user's details", http.StatusForbidden)
-		return
-	}
-
-	convId, err := strconv.ParseUint(convIdStr, 10, 64)
+	convID, err := strconv.ParseUint(convIdStr, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid conversation id", http.StatusBadRequest)
 		return
 	}
-	convName := r.URL.Query().Get("conversationName")
-	var convNamePtr *string
-	if convName != "" {
-		convNamePtr = &convName
-	}
-	conv, err := rt.db.GetConversation(userId, convId, convNamePtr)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+
+	tokenUserID, err := ExtractUserIDFromToken(r)
+	if err != nil || tokenUserID != userID {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
+
+	conv, err := rt.db.GetConversation(userID, convID, nil)
+	if err != nil {
+		if err.Error() == "user is not a member of this conversation" {
+			http.Error(w, "forbidden: user is not a member of this conversation", http.StatusForbidden)
+			return
+		}
+		if err == database.ErrConversationNotFound {
+			http.Error(w, "conversation not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(conv)
+	json.NewEncoder(w).Encode(conv)
 }
 
 // addtoGroup handles POST /users/:id/conversations/:convId/members.

@@ -33,6 +33,11 @@ func (rt *_router) Handler() http.Handler {
 	rt.router.DELETE("/users/:id/conversations/:convId/messages/:msgId/comment/:commentId", rt.wrap(rt.uncommentMessage))
 	rt.router.GET("/context", rt.wrap(rt.getContextReply))
 
+	// Contacts
+	rt.router.POST("/users/:id/contacts", rt.wrap(rt.addContact))
+	rt.router.GET("/users/:id/contacts", rt.wrap(rt.listContacts))
+	rt.router.DELETE("/users/:id/contacts/:contactId", rt.wrap(rt.removeContact))
+
 	// Special routes
 	rt.router.GET("/liveness", rt.liveness)
 

@@ -1,5 +1,9 @@
 {
   "dependencies": {
-    "@ibm-cloud/openapi-ruleset": "^1.25.1"
+    "@ibm-cloud/openapi-ruleset": "^1.25.1",
+    "jwt-decode": "^4.0.0"
+  },
+  "scripts": {
+    "build-prod": "vue-cli-service build --mode production"
   }
 }

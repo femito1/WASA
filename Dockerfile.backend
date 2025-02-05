@@ -1,19 +1,14 @@
-FROM golang:1.17.0 AS stage
+FROM golang:1.17.0 AS builder
 
 WORKDIR /src/
-
 COPY . .
 
-RUN go build -o /app/webapi .cmd/webapi
+RUN go build -o /app/webapi ./cmd/webapi
 
 FROM debian:bullseye
-
-EXPOSE 3000
-
-VOLUME /data
+EXPOSE 3000 4000
 
 WORKDIR /app/
-
-COPY --from=builder /app/weapi ./
+COPY --from=builder /app/webapi ./
 
 CMD ["/app/webapi"]

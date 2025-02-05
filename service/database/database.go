@@ -51,9 +51,10 @@ type AppDatabase interface {
 	CommentMessage(user User, convId, msgId uint64, commentText string) (uint64, error)
 	DeleteComment(user User, convId, msgId, commentId uint64) error
 
-	// Example functions (get-name, set-name)
-	GetName() (string, error)
-	SetName(name string) error
+	// Contacts
+	AddContact(userID, contactID uint64) error
+	ListContacts(userID uint64) ([]User, error)
+	RemoveContact(userID, contactID uint64) error
 }
 
 // appdbimpl is the concrete implementation of AppDatabase.
@@ -161,16 +162,18 @@ func New(db *sql.DB) (AppDatabase, error) {
 	if _, err := db.Exec(commentsTable); err != nil {
 		return nil, fmt.Errorf("error creating comments table: %w", err)
 	}
-
-	// Example table for get-name/set-name examples.
-	exampleTable := `
-	CREATE TABLE IF NOT EXISTS example_table (
-		id INTEGER NOT NULL PRIMARY KEY,
-		name TEXT
+	// In database/database.go (inside New(db *sql.DB))
+	const contactsTable = `
+	CREATE TABLE IF NOT EXISTS contacts (
+	user_id INTEGER NOT NULL,
+	contact_id INTEGER NOT NULL,
+	PRIMARY KEY (user_id, contact_id),
+	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+	FOREIGN KEY (contact_id) REFERENCES users(id) ON DELETE CASCADE
 	);
 	`
-	if _, err := db.Exec(exampleTable); err != nil {
-		return nil, fmt.Errorf("error creating example_table: %w", err)
+	if _, err := db.Exec(contactsTable); err != nil {
+		return nil, fmt.Errorf("error creating contacts table: %w", err)
 	}
 
 	return &appdbimpl{

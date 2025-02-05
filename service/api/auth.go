@@ -3,7 +3,9 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -11,8 +13,7 @@ import (
 )
 
 // jwtSecret is the signing key for JWT tokens.
-// In a production application, make sure this is configurable and secured.
-var jwtSecret = []byte("super-secret-key")
+var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
 // CustomClaims defines the structure of our JWT claims.
 type CustomClaims struct {
@@ -50,7 +51,7 @@ func ExtractUserIDFromToken(r *http.Request) (uint64, error) {
 		return jwtSecret, nil
 	})
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to parse token: %w", err)
 	}
 	if claims, ok := token.Claims.(*CustomClaims); ok && token.Valid {
 		return claims.UserID, nil
