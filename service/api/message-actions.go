@@ -60,7 +60,10 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(msg)
+	if err := json.NewEncoder(w).Encode(msg); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode sendMessage response")
+	}
+
 }
 
 // deleteMessage handles DELETE /users/:id/conversations/:convId/messages/:msgId.

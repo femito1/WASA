@@ -132,7 +132,6 @@ func (db *appdbimpl) ListUsers(nameFilter string) ([]User, error) {
 		return nil, err
 	}
 	defer rows.Close()
-
 	var users []User
 	for rows.Next() {
 		var u User
@@ -140,6 +139,9 @@ func (db *appdbimpl) ListUsers(nameFilter string) ([]User, error) {
 			return nil, err
 		}
 		users = append(users, u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return users, nil
 }

@@ -2,17 +2,16 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"time"
 
 	"github.com/ardanlabs/conf"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
-// WebAPIConfiguration describes the web API configuration. This structure is automatically parsed by
-// loadConfiguration and values from flags, environment variable or configuration file will be loaded.
+// WebAPIConfiguration describes the web API configuration.
 type WebAPIConfiguration struct {
 	Config struct {
 		Path string `conf:"default:/conf/config.yml"`
@@ -30,39 +29,36 @@ type WebAPIConfiguration struct {
 	}
 }
 
-// loadConfiguration creates a WebAPIConfiguration starting from flags, environment variables and configuration file.
-// It works by loading environment variables first, then update the config using command line flags, finally loading the
-// configuration file (specified in WebAPIConfiguration.Config.Path).
-// So, CLI parameters will override the environment, and configuration file will override everything.
-// Note that the configuration file can be specified only via CLI or environment variable.
+// loadConfiguration creates a WebAPIConfiguration from flags, environment variables and a configuration file.
 func loadConfiguration() (WebAPIConfiguration, error) {
 	var cfg WebAPIConfiguration
 
-	// Try to load configuration from environment variables and command line switches
+	// Parse environment variables and CLI flags.
 	if err := conf.Parse(os.Args[1:], "CFG", &cfg); err != nil {
 		if errors.Is(err, conf.ErrHelpWanted) {
-			usage, err := conf.Usage("CFG", &cfg)
-			if err != nil {
-				return cfg, fmt.Errorf("generating config usage: %w", err)
+			usage, err2 := conf.Usage("CFG", &cfg)
+			if err2 != nil {
+				return cfg, err2
 			}
-			fmt.Println(usage) //nolint:forbidigo
+			// Use logger instead of fmt.Println
+			logrus.Info(usage)
 			return cfg, conf.ErrHelpWanted
 		}
-		return cfg, fmt.Errorf("parsing config: %w", err)
+		return cfg, err
 	}
 
-	// Override values from YAML if specified and if it exists (useful in k8s/compose)
+	// Override with YAML config file if it exists.
 	fp, err := os.Open(cfg.Config.Path)
 	if err != nil && !os.IsNotExist(err) {
-		return cfg, fmt.Errorf("can't read the config file, while it exists: %w", err)
+		return cfg, err
 	} else if err == nil {
 		yamlFile, err := io.ReadAll(fp)
 		if err != nil {
-			return cfg, fmt.Errorf("can't read config file: %w", err)
+			return cfg, err
 		}
 		err = yaml.Unmarshal(yamlFile, &cfg)
 		if err != nil {
-			return cfg, fmt.Errorf("can't unmarshal config file: %w", err)
+			return cfg, err
 		}
 		_ = fp.Close()
 	}

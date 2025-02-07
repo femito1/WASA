@@ -15,7 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// setupTestAPI creates an in-memory SQLite DB, initializes the database layer and the API router.
+// setupTestAPI creates an in-memory SQLite DB, initializes the database layer, and the API router.
 func setupTestAPI(t *testing.T) http.Handler {
 	t.Helper()
 
@@ -63,13 +63,16 @@ func TestDoLogin(t *testing.T) {
 		t.Fatalf("expected status %d, got %d, body: %s", http.StatusCreated, w.Code, w.Body.String())
 	}
 
-	// Check response contains the "identifier".
-	var resp map[string]string
+	// Parse response as a generic map.
+	var resp map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok := resp["identifier"]; !ok {
 		t.Fatalf("expected identifier in response, got: %v", resp)
+	}
+	if _, ok := resp["userId"]; !ok {
+		t.Fatalf("expected userId in response, got: %v", resp)
 	}
 }
 
@@ -116,17 +119,26 @@ func TestCreateConversationAndSendMessage(t *testing.T) {
 	if w.Code != http.StatusCreated {
 		t.Fatalf("expected status %d, got %d", http.StatusCreated, w.Code)
 	}
-	var loginResp map[string]string
+	var loginResp map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &loginResp); err != nil {
 		t.Fatal(err)
 	}
-	userID := loginResp["identifier"]
+	uidFloat, ok := loginResp["userId"].(float64)
+	if !ok {
+		t.Fatal("expected userId as a number")
+	}
+	userID := strconv.FormatUint(uint64(uidFloat), 10)
+	token, ok := loginResp["identifier"].(string)
+	if !ok {
+		t.Fatal("expected identifier as token")
+	}
 
 	// Create a conversation as user1.
 	convURL := "/users/" + userID + "/conversations"
 	convReqPayload := []byte(`{"name": "Test Conversation", "members": []}`)
 	req = httptest.NewRequest("POST", convURL, bytes.NewBuffer(convReqPayload))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
 	w = httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 	if w.Code != http.StatusCreated {
@@ -147,6 +159,7 @@ func TestCreateConversationAndSendMessage(t *testing.T) {
 	msgReqPayload := []byte(`{"content": "Hello World", "format": "string"}`)
 	req = httptest.NewRequest("POST", msgURL, bytes.NewBuffer(msgReqPayload))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
 	w = httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 	if w.Code != http.StatusCreated {

@@ -43,6 +43,9 @@ func (db *appdbimpl) ListContacts(userID uint64) ([]User, error) {
 		}
 		contacts = append(contacts, u)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return contacts, nil
 }
 

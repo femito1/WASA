@@ -56,7 +56,9 @@ func (rt *_router) createGroup(w http.ResponseWriter, r *http.Request, ps httpro
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(conv)
+	if err := json.NewEncoder(w).Encode(conv); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode createGroup response")
+	}
 }
 
 // getMyConversations handles GET /users/:id/conversations.
@@ -89,7 +91,9 @@ func (rt *_router) getMyConversations(w http.ResponseWriter, r *http.Request, ps
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(convs)
+	if err := json.NewEncoder(w).Encode(convs); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode getMyConversations response")
+	}
 }
 
 // getConversation handles GET /users/:id/conversations/:convId.
@@ -131,7 +135,9 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(conv)
+	if err := json.NewEncoder(w).Encode(conv); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode getConversation response")
+	}
 }
 
 // addtoGroup handles POST /users/:id/conversations/:convId/members.
@@ -177,7 +183,9 @@ func (rt *_router) addtoGroup(w http.ResponseWriter, r *http.Request, ps httprou
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(conv)
+	if err := json.NewEncoder(w).Encode(conv); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode addtoGroup response")
+	}
 }
 
 // leaveGroup handles DELETE /users/:id/conversations/:convId/members.
@@ -259,7 +267,9 @@ func (rt *_router) setGroupName(w http.ResponseWriter, r *http.Request, ps httpr
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(conv)
+	if err := json.NewEncoder(w).Encode(conv); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode setGroupName response")
+	}
 }
 
 // setGroupPhoto handles PUT /users/:id/conversations/:convId/photo.
@@ -305,5 +315,7 @@ func (rt *_router) setGroupPhoto(w http.ResponseWriter, r *http.Request, ps http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(conv)
+	if err := json.NewEncoder(w).Encode(conv); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode setGroupPhoto response")
+	}
 }

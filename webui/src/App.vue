@@ -4,7 +4,7 @@
 	  <!-- Header -->
 	  <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
 		<div class="container-fluid">
-		  <RouterLink to="/" class="navbar-brand px-3 fs-6">WhatsApp Clone</RouterLink>
+		  <RouterLink to="/" class="navbar-brand px-3 fs-6">WasApp</RouterLink>
 		  <nav class="d-flex align-items-center">
 			<RouterLink to="/chats" class="nav-link text-white me-2">Chats</RouterLink>
 			<RouterLink to="/contacts" class="nav-link text-white me-2">Contacts</RouterLink>
@@ -91,8 +91,4 @@
 	router.push({ name: 'Login' })
   }
   </script>
-  
-  <style scoped>
-  /* Add App.vue specific styles if needed */
-  </style>
   

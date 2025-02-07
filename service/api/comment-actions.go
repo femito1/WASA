@@ -10,8 +10,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-// commentMessage handles POST /users/:id/conversations/:convId/messages/:msgId/comment.
-// It expects a JSON payload with { "commentText": string } and returns { "commentId": number }.
 func (rt *_router) commentMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 	userIdStr := ps.ByName("id")
 	convIdStr := ps.ByName("convId")
@@ -38,7 +36,6 @@ func (rt *_router) commentMessage(w http.ResponseWriter, r *http.Request, ps htt
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	// Verify that the user exists.
 	user, err := rt.db.CheckUserById(database.User{Id: userId})
 	if err != nil {
 		http.Error(w, "user not found", http.StatusNotFound)
@@ -51,10 +48,11 @@ func (rt *_router) commentMessage(w http.ResponseWriter, r *http.Request, ps htt
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(map[string]uint64{"commentId": commentId})
+	if err := json.NewEncoder(w).Encode(map[string]uint64{"commentId": commentId}); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode comment response")
+	}
 }
 
-// uncommentMessage handles DELETE /users/:id/conversations/:convId/messages/:msgId/comment/:commentId.
 func (rt *_router) uncommentMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 	userIdStr := ps.ByName("id")
 	convIdStr := ps.ByName("convId")
@@ -80,7 +78,6 @@ func (rt *_router) uncommentMessage(w http.ResponseWriter, r *http.Request, ps h
 		http.Error(w, "invalid comment id", http.StatusBadRequest)
 		return
 	}
-	// Verify that the user exists.
 	user, err := rt.db.CheckUserById(database.User{Id: userId})
 	if err != nil {
 		http.Error(w, "user not found", http.StatusNotFound)

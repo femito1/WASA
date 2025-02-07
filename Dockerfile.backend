@@ -1,6 +1,7 @@
 FROM golang:1.17.0 AS builder
 
 WORKDIR /src/
+ENV CGO_CFLAGS="-Wno-return-local-addr"
 COPY . .
 
 RUN go build -o /app/webapi ./cmd/webapi

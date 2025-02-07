@@ -21,7 +21,6 @@ func (db *appdbimpl) getConversationMembers(convId uint64) ([]User, error) {
 		return nil, err
 	}
 	defer rows.Close()
-
 	var members []User
 	for rows.Next() {
 		var u User
@@ -29,6 +28,9 @@ func (db *appdbimpl) getConversationMembers(convId uint64) ([]User, error) {
 			return nil, err
 		}
 		members = append(members, u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return members, nil
 }

@@ -38,12 +38,14 @@ func (rt *_router) doLogin(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 
-	// Return the token as the identifier.
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(map[string]string{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"identifier": token,
-	})
+		"userId":     dbUser.Id,
+	}); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode doLogin response")
+	}
 
 }
 
@@ -67,7 +69,9 @@ func (rt *_router) listUsers(w http.ResponseWriter, r *http.Request, ps httprout
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(apiUsers)
+	if err := json.NewEncoder(w).Encode(apiUsers); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode listUsers response")
+	}
 }
 
 // setMyUserName handles PUT /users/:id.
@@ -121,7 +125,9 @@ func (rt *_router) setMyUserName(w http.ResponseWriter, r *http.Request, ps http
 	user.FromDatabase(updatedUser)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(user)
+	if err := json.NewEncoder(w).Encode(user); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode setMyUserName response")
+	}
 }
 
 // setMyPhoto handles PUT /users/:id/photo.
@@ -175,5 +181,7 @@ func (rt *_router) setMyPhoto(w http.ResponseWriter, r *http.Request, ps httprou
 	user.FromDatabase(updatedUser)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(user)
+	if err := json.NewEncoder(w).Encode(user); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode setMyPhoto response")
+	}
 }

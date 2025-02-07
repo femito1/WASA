@@ -65,7 +65,9 @@ func (rt *_router) listContacts(w http.ResponseWriter, r *http.Request, ps httpr
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(contacts)
+	if err := json.NewEncoder(w).Encode(contacts); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode listContacts response")
+	}
 }
 
 // removeContact handles DELETE /users/:id/contacts/:contactId.
