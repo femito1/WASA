@@ -1,0 +1,150 @@
+<!-- File: webui/src/components/GroupSettingsModal.vue -->
+<template>
+  <div class="modal-overlay">
+    <div class="modal-content">
+      <h5>Conversation Settings</h5>
+      <div class="mb-3">
+        <label for="groupName" class="form-label">Conversation Name:</label>
+        <input id="groupName" v-model="groupName" type="text" class="form-control" />
+      </div>
+      <div class="mb-3">
+        <label for="groupPhoto" class="form-label">Conversation Photo (Base64):</label>
+        <textarea id="groupPhoto" v-model="groupPhoto" class="form-control" rows="2"></textarea>
+      </div>
+      <div class="mb-3">
+        <label for="contactSelect" class="form-label">Add Member from Contacts:</label>
+        <select id="contactSelect" v-model="selectedContactId" class="form-select">
+          <option v-for="contact in contacts" :key="contact.id" :value="contact.id">
+            {{ contact.username }}
+          </option>
+        </select>
+        <button class="btn btn-secondary mt-2" @click="addMember" :disabled="addingMember">
+          Add Member
+        </button>
+      </div>
+      <div class="d-flex justify-content-between">
+        <button class="btn btn-danger" @click="leaveConversation" :disabled="processing">Leave Conversation</button>
+        <div>
+          <button class="btn btn-secondary me-2" @click="close">Close</button>
+          <button class="btn btn-primary" @click="updateConversation" :disabled="processing">Update</button>
+        </div>
+      </div>
+      <ErrorMsg v-if="errorMsg" :msg="errorMsg" />
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from '../services/axios'
+import ErrorMsg from './ErrorMsg.vue'
+import jwtDecode from 'jwt-decode'
+
+const props = defineProps({
+  conversation: {
+    type: Object,
+    required: true,
+  },
+})
+const emit = defineEmits(['updated', 'close'])
+
+const groupName = ref(props.conversation.name || '')
+const groupPhoto = ref(props.conversation.picture || '')
+const processing = ref(false)
+const addingMember = ref(false)
+const errorMsg = ref(null)
+
+const contacts = ref([])
+const selectedContactId = ref(null)
+
+const token = localStorage.getItem("authToken")
+if (!token) {
+  throw new Error("No authentication token found")
+}
+const decoded = jwtDecode(token)
+const userId = Number(decoded.user_id)
+const convId = props.conversation.id
+
+async function fetchContacts() {
+  try {
+    const response = await axios.get(`/users/${userId}/contacts`)
+    contacts.value = response.data
+    if (contacts.value.length > 0) {
+      selectedContactId.value = contacts.value[0].id
+    }
+  } catch (err) {
+    errorMsg.value = err.response?.data?.error || err.toString()
+  }
+}
+
+onMounted(() => {
+  fetchContacts()
+})
+
+async function updateConversation() {
+  processing.value = true
+  errorMsg.value = null
+  try {
+    await axios.put(`/users/${userId}/conversations/${convId}/name`, { newName: groupName.value })
+    await axios.put(`/users/${userId}/conversations/${convId}/photo`, { newPhoto: groupPhoto.value })
+    emit("updated")
+    close()
+  } catch (err) {
+    errorMsg.value = err.response?.data?.error || err.toString()
+  }
+  processing.value = false
+}
+
+async function addMember() {
+  if (!selectedContactId.value) return
+  addingMember.value = true
+  errorMsg.value = null
+  try {
+    await axios.post(`/users/${userId}/conversations/${convId}/members`, { userIdToAdd: selectedContactId.value })
+    emit("updated")
+  } catch (err) {
+    errorMsg.value = err.response?.data?.error || err.toString()
+  }
+  addingMember.value = false
+}
+
+async function leaveConversation() {
+  if (!confirm("Are you sure you want to leave this conversation?")) return
+  processing.value = true
+  errorMsg.value = null
+  try {
+    await axios.delete(`/users/${userId}/conversations/${convId}/members`)
+    emit("updated")
+    close()
+  } catch (err) {
+    errorMsg.value = err.response?.data?.error || err.toString()
+  }
+  processing.value = false
+}
+
+function close() {
+  emit("close")
+}
+</script>
+
+<style scoped>
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-content {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 400px;
+}
+</style>

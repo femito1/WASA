@@ -167,3 +167,68 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// reactToMessage handles POST /users/:id/conversations/:convId/messages/:msgId/reaction.
+// It expects a JSON payload with { "emoji": string }.
+func (rt *_router) reactToMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+	// Parse IDs from URL
+	userIdStr := ps.ByName("id")
+	convIdStr := ps.ByName("convId")
+	msgIdStr := ps.ByName("msgId")
+
+	userId, err := strconv.ParseUint(userIdStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+	convId, err := strconv.ParseUint(convIdStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid conversation id", http.StatusBadRequest)
+		return
+	}
+	msgId, err := strconv.ParseUint(msgIdStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid message id", http.StatusBadRequest)
+		return
+	}
+
+	// Verify the token's user id matches the URL's user id.
+	tokenUserID, err := ExtractUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if tokenUserID != userId {
+		http.Error(w, "forbidden: you cannot update another user's details", http.StatusForbidden)
+		return
+	}
+
+	// Decode the reaction payload.
+	var reqPayload struct {
+		Emoji string `json:"emoji"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&reqPayload); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if reqPayload.Emoji == "" {
+		http.Error(w, "emoji is required", http.StatusBadRequest)
+		return
+	}
+
+	// Verify the user exists.
+	user, err := rt.db.CheckUserById(database.User{Id: userId})
+	if err != nil {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+
+	// Call the database function to add the reaction.
+	if err := rt.db.ReactToMessage(user, convId, msgId, reqPayload.Emoji); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Respond with no content.
+	w.WriteHeader(http.StatusNoContent)
+}

@@ -8,6 +8,7 @@
 		  <nav class="d-flex align-items-center">
 			<RouterLink to="/chats" class="nav-link text-white me-2">Chats</RouterLink>
 			<RouterLink to="/contacts" class="nav-link text-white me-2">Contacts</RouterLink>
+			<RouterLink to="/profile" class="nav-link text-white me-2">Profile</RouterLink>
 			<div class="ms-auto d-flex align-items-center">
 			  <template v-if="isAuthenticated">
 				<span class="text-white me-2">Hello, {{ username }}</span>
@@ -86,8 +87,6 @@
   function logout() {
 	token.value = null
 	localStorage.removeItem('authToken')
-	localStorage.removeItem('userId')
-	localStorage.removeItem('username')
 	router.push({ name: 'Login' })
   }
   </script>

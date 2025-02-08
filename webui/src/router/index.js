@@ -3,28 +3,30 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import ChatListView from '../views/ChatListView.vue'
 import ChatView from '../views/ChatView.vue'
-import ContactsView from '../views/ContactsView.vue' // Optional
+import ContactsView from '../views/ContactsView.vue'
+import ProfileView from '../views/ProfileView.vue'
 
 const routes = [
   { path: '/', name: 'Login', component: LoginView, meta: { public: true } },
   { path: '/chats', name: 'ChatList', component: ChatListView },
   { path: '/chat/:convId', name: 'Chat', component: ChatView, props: true },
-  { path: '/contacts', name: 'Contacts', component: ContactsView } // Optional
-];
+  { path: '/contacts', name: 'Contacts', component: ContactsView },
+  { path: '/profile', name: 'Profile', component: ProfileView }
+]
 
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes
-});
+})
 
 // Global navigation guard: if route is not public, ensure token exists.
 router.beforeEach((to, from, next) => {
-  const isPublic = to.meta.public || false;
-  const token = localStorage.getItem('authToken');
+  const isPublic = to.meta.public || false
+  const token = localStorage.getItem('authToken')
   if (!isPublic && !token) {
-    return next({ name: 'Login' });
+    return next({ name: 'Login' })
   }
-  next();
-});
+  next()
+})
 
-export default router;
+export default router

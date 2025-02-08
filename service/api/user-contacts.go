@@ -64,8 +64,17 @@ func (rt *_router) listContacts(w http.ResponseWriter, r *http.Request, ps httpr
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Convert database contacts to API contacts.
+	apiContacts := make([]User, len(contacts))
+	for i, u := range contacts {
+		var user User
+		user.FromDatabase(u)
+		apiContacts[i] = user
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(contacts); err != nil {
+	if err := json.NewEncoder(w).Encode(apiContacts); err != nil {
 		ctx.Logger.WithError(err).Error("failed to encode listContacts response")
 	}
 }

@@ -55,6 +55,9 @@ type AppDatabase interface {
 	AddContact(userID, contactID uint64) error
 	ListContacts(userID uint64) ([]User, error)
 	RemoveContact(userID, contactID uint64) error
+
+	// Message reactions
+	ReactToMessage(user User, convId, msgId uint64, emoji string) error
 }
 
 // appdbimpl is the concrete implementation of AppDatabase.
