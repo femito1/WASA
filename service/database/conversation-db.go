@@ -143,6 +143,9 @@ func (db *appdbimpl) GetConversations(userId uint64) ([]Conversation, error) {
 		}
 		convs = append(convs, conv)
 	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
 	return convs, nil
 }
 
@@ -155,7 +158,7 @@ func (db *appdbimpl) GetConversation(userID, convID uint64, conversationName *st
 	query := "SELECT id, name, picture FROM conversations WHERE id = ?"
 	row := db.c.QueryRow(query, convID)
 	if err := row.Scan(&conv.Id, &conv.Name, &conv.Picture); err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return conv, ErrConversationNotFound
 		}
 		return conv, fmt.Errorf("error scanning conversation: %w", err)

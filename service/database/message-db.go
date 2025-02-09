@@ -114,5 +114,8 @@ func (db *appdbimpl) getMessageReactions(msgId uint64) ([]Reaction, error) {
 		r.Count = count
 		reactions = append(reactions, r)
 	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
 	return reactions, nil
 }

@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const instance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || window.location.origin,
+  baseURL: __API_URL__,
   timeout: 5000, // 5-second timeout
 });
 

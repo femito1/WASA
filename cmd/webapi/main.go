@@ -100,8 +100,7 @@ func run() error {
 	// Start the API server in a goroutine.
 	go func() {
 		logger.Infof("API listening on %s", apiserver.Addr)
-		err := apiserver.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := apiserver.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.WithError(err).Error("ListenAndServe error")
 			serverErrors <- err
 		} else {

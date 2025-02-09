@@ -1,31 +1,19 @@
-# Dockerfile.frontend
-
-# Stage 1: Build the frontend
 FROM node:lts AS builder
 
 WORKDIR /app/webui
 
-# Copy package files first to leverage caching.
 COPY webui/package.json webui/yarn.lock ./
 
-
-# Copy the rest of the source code.
 COPY webui/ .
 
-# Build the production assets.
 RUN yarn run build-prod
 
-# Stage 2: Serve with Nginx
 FROM nginx:stable
 
-# Remove default Nginx static assets (optional).
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copy the production build from the builder stage.
 COPY --from=builder /app/webui/dist /usr/share/nginx/html
 
-# Expose port 80 (Nginx default).
 EXPOSE 80
 
-# Start Nginx in the foreground.
 CMD ["nginx", "-g", "daemon off;"]

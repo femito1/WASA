@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -126,7 +127,7 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 			http.Error(w, "forbidden: user is not a member of this conversation", http.StatusForbidden)
 			return
 		}
-		if err == database.ErrConversationNotFound {
+		if errors.Is(err, database.ErrConversationNotFound) {
 			http.Error(w, "conversation not found", http.StatusNotFound)
 			return
 		}
