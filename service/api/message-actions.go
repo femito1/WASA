@@ -10,8 +10,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-// sendMessage handles POST /users/:id/conversations/:convId/messages.
-// It expects a JSON payload with { "content": string, "format": string } and returns the created message.
+// In service/api/message-actions.go, function sendMessage:
 func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 	userIdStr := ps.ByName("id")
 	convIdStr := ps.ByName("convId")
@@ -40,8 +39,9 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		return
 	}
 	var reqPayload struct {
-		Content string `json:"content"`
-		Format  string `json:"format"`
+		Content string  `json:"content"`
+		Format  string  `json:"format"`
+		ReplyTo *uint64 `json:"replyTo,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&reqPayload); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -53,17 +53,18 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		http.Error(w, "sender not found", http.StatusNotFound)
 		return
 	}
-	msg, err := rt.db.CreateMessage(sender, convId, reqPayload.Content, reqPayload.Format)
+
+	msg, err := rt.db.CreateMessage(sender, convId, reqPayload.Content, reqPayload.Format, reqPayload.ReplyTo)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(msg); err != nil {
 		ctx.Logger.WithError(err).Error("failed to encode sendMessage response")
 	}
-
 }
 
 // deleteMessage handles DELETE /users/:id/conversations/:convId/messages/:msgId.

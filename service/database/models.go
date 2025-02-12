@@ -20,6 +20,8 @@ type Message struct {
 	State          string     `json:"state"`
 	Reactions      []Reaction `json:"reactions"`
 	Timestamp      string     `json:"timestamp,omitempty"`
+	ReplyToID      *uint64    `json:"replyToId,omitempty"`
+	ReplyTo        *Message   `json:"replyTo,omitempty"`
 }
 
 // Reaction represents an emoji reaction to a message.

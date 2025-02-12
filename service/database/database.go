@@ -43,9 +43,10 @@ type AppDatabase interface {
 	RemoveUserFromConversation(userId, convId uint64) error
 
 	// Message operations
-	CreateMessage(sender User, convId uint64, content string, format string) (Message, error)
+	CreateMessage(sender User, convId uint64, content string, format string, replyTo *uint64) (Message, error)
 	DeleteMessage(user User, convId, msgId uint64) error
 	ForwardMessage(user User, convId, msgId, targetConvId uint64) error
+	GetMessageByID(msgId uint64) (Message, error)
 
 	// Comment operations
 	CommentMessage(user User, convId, msgId uint64, commentText string) (uint64, error)
@@ -126,6 +127,7 @@ func New(db *sql.DB) (AppDatabase, error) {
 		content TEXT NOT NULL,
 		format TEXT NOT NULL,
 		state TEXT NOT NULL,
+		reply_to INTEGER,
 		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
 		FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE

@@ -37,7 +37,7 @@ func (db *appdbimpl) getConversationMembers(convId uint64) ([]User, error) {
 
 func (db *appdbimpl) getConversationMessages(convId uint64) ([]Message, error) {
 	query := `
-		SELECT m.id, m.sender_id, u.username, m.content, m.format, m.state, m.timestamp
+		SELECT m.id, m.sender_id, u.username, m.content, m.format, m.state, m.timestamp, m.reply_to
 		FROM messages m
 		JOIN users u ON m.sender_id = u.id
 		WHERE m.conversation_id = ?
@@ -52,9 +52,20 @@ func (db *appdbimpl) getConversationMessages(convId uint64) ([]Message, error) {
 	var messages []Message
 	for rows.Next() {
 		var m Message
-		err = rows.Scan(&m.Id, &m.SenderId, &m.SenderName, &m.Content, &m.Format, &m.State, &m.Timestamp)
+		var replyTo sql.NullInt64
+		err = rows.Scan(&m.Id, &m.SenderId, &m.SenderName, &m.Content, &m.Format, &m.State, &m.Timestamp, &replyTo)
 		if err != nil {
 			return nil, err
+		}
+		if replyTo.Valid {
+			// Load the replied-to message details.
+			rMsg, err := db.GetMessageByID(uint64(replyTo.Int64))
+			if err != nil {
+				return nil, err
+			}
+			m.ReplyTo = &rMsg
+			id := uint64(replyTo.Int64)
+			m.ReplyToID = &id
 		}
 		// Load reactions (if applicable).
 		m.Reactions, err = db.getMessageReactions(m.Id)

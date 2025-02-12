@@ -5,12 +5,12 @@ import (
 	"errors"
 )
 
-func (db *appdbimpl) CreateMessage(sender User, convId uint64, content string, format string) (Message, error) {
+func (db *appdbimpl) CreateMessage(sender User, convId uint64, content string, format string, replyTo *uint64) (Message, error) {
 	var msg Message
-	// Insert the message with state "Sent"
+	// Insert the message with state "Sent" and optional reply_to field.
 	res, err := db.c.Exec(
-		"INSERT INTO messages(conversation_id, sender_id, content, format, state) VALUES (?, ?, ?, ?, ?)",
-		convId, sender.Id, content, format, "Sent",
+		"INSERT INTO messages(conversation_id, sender_id, content, format, state, reply_to) VALUES (?, ?, ?, ?, ?, ?)",
+		convId, sender.Id, content, format, "Sent", replyTo,
 	)
 	if err != nil {
 		return msg, err
@@ -28,9 +28,10 @@ func (db *appdbimpl) CreateMessage(sender User, convId uint64, content string, f
 	msg.State = "Sent"
 	// Retrieve the timestamp
 	err = db.c.QueryRow("SELECT timestamp FROM messages WHERE id = ?", msg.Id).Scan(&msg.Timestamp)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return msg, err
 	}
+	// Set reply info (replyTo field remains nil here; it will be loaded when fetching conversation messages)
 	msg.Reactions = []Reaction{}
 	return msg, nil
 }
@@ -134,4 +135,25 @@ func (db *appdbimpl) getMessageReactions(msgId uint64) ([]Reaction, error) {
 		return nil, rows.Err()
 	}
 	return reactions, nil
+}
+
+// GetMessageByID retrieves a message by its id.
+func (db *appdbimpl) GetMessageByID(msgId uint64) (Message, error) {
+	var m Message
+	var replyTo sql.NullInt64
+	query := `
+	SELECT m.id, m.sender_id, u.username, m.content, m.format, m.state, m.timestamp, m.reply_to
+	FROM messages m
+	JOIN users u ON m.sender_id = u.id
+	WHERE m.id = ?
+	`
+	err := db.c.QueryRow(query, msgId).Scan(&m.Id, &m.SenderId, &m.SenderName, &m.Content, &m.Format, &m.State, &m.Timestamp, &replyTo)
+	if err != nil {
+		return m, err
+	}
+	if replyTo.Valid {
+		id := uint64(replyTo.Int64)
+		m.ReplyToID = &id
+	}
+	return m, nil
 }
