@@ -42,15 +42,13 @@ func main() {
 	res, err := http.Get(fmt.Sprintf("http://localhost:%d/liveness", *port))
 	if err != nil {
 		logger.Println(err.Error())
-		os.Exit(1)
+		return
 	}
 	defer res.Body.Close()
 
 	// Check the status code.
 	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusNoContent {
 		logger.Println("Healthcheck request not OK:", res.Status)
-		os.Exit(1)
+		return
 	}
-
-	os.Exit(0)
 }

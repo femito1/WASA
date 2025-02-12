@@ -21,7 +21,7 @@ import (
 func main() {
 	if err := run(); err != nil {
 		logrus.WithError(err).Error("application terminated with error")
-		os.Exit(1)
+		return
 	}
 }
 
@@ -100,12 +100,12 @@ func run() error {
 	// Start the API server in a goroutine.
 	go func() {
 		logger.Infof("API listening on %s", apiserver.Addr)
-		if err := apiserver.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.WithError(err).Error("ListenAndServe error")
-			serverErrors <- err
-		} else {
-			serverErrors <- nil
+		err := apiserver.ListenAndServe()
+		// Log the return value from ListenAndServe to explicitly check the error.
+		if err != nil {
+			logger.WithError(err).Info("ListenAndServe returned")
 		}
+		serverErrors <- err
 		logger.Info("stopping API server")
 	}()
 

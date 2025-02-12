@@ -8,7 +8,7 @@
             {{ emoji }}
           </span>
         </div>
-        <button class="btn btn-secondary mt-2" @click="$emit('close')">Cancel</button>
+        <button class="btn btn-secondary mt-2" @click="emitClose">Cancel</button>
       </div>
     </div>
   </template>
@@ -18,12 +18,17 @@
   const props = defineProps({
     message: { type: Object, required: true }
   })
+  // Declare emitted events.
+  const emit = defineEmits(['react','close'])
   // Define a list of emoji reactions.
   const emojis = ref(['👍', '❤️', '😂', '😮', '😢', '👏'])
   
   function selectReaction(emoji) {
     // Emit the reaction event with the selected emoji.
-    $emit('react', emoji)
+    emit('react', emoji)
+  }
+  function emitClose() {
+    emit('close')
   }
   </script>
   

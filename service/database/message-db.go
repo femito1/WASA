@@ -75,7 +75,23 @@ func (db *appdbimpl) ReactToMessage(user User, convId, msgId uint64, emoji strin
 	if err != nil {
 		return err
 	}
-	_, err = db.c.Exec("INSERT INTO reactions(message_id, user_id, emoji) VALUES (?, ?, ?)", msgId, user.Id, emoji)
+	var existing string
+	err = db.c.QueryRow("SELECT emoji FROM reactions WHERE message_id = ? AND user_id = ?", msgId, user.Id).Scan(&existing)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// No previous reaction found; insert new reaction.
+			_, err := db.c.Exec("INSERT INTO reactions(message_id, user_id, emoji) VALUES (?, ?, ?)", msgId, user.Id, emoji)
+			return err
+		}
+		return err
+	}
+	// Reaction exists, now check if it's the same.
+	if existing == emoji {
+		// Same reaction already exists; do nothing.
+		return nil
+	}
+	// Update existing reaction to the new emoji.
+	_, err = db.c.Exec("UPDATE reactions SET emoji = ? WHERE message_id = ? AND user_id = ?", emoji, msgId, user.Id)
 	return err
 }
 
