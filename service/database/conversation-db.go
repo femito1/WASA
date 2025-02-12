@@ -69,46 +69,91 @@ func (db *appdbimpl) getConversationMessages(convId uint64) ([]Message, error) {
 	return messages, nil
 }
 
-// CreateConversation creates a new conversation with an optional initial set of members.
+// CreateConversation creates either a direct conversation (2 users) or a group (>2 users).
+// For direct conversations, the other user must be in the creator's contacts.
 func (db *appdbimpl) CreateConversation(creator User, convName string, members []uint64) (Conversation, error) {
 	var conv Conversation
 
-	// Create the conversation.
+	// Validate members
+	if len(members) == 0 {
+		return conv, errors.New("cannot create conversation: no other members specified")
+	}
+
+	// For direct conversations (just one other member)
+	if len(members) == 1 {
+		// Check if the other user is in creator's contacts
+		var count int
+		err := db.c.QueryRow("SELECT COUNT(*) FROM contacts WHERE user_id = ? AND contact_id = ?",
+			creator.Id, members[0]).Scan(&count)
+		if err != nil {
+			return conv, fmt.Errorf("error checking contacts: %w", err)
+		}
+		if count == 0 {
+			return conv, errors.New("cannot create conversation: user not in contacts")
+		}
+
+		// Check if a direct conversation already exists between these users
+		rows, err := db.c.Query(`
+			SELECT DISTINCT c.id 
+			FROM conversations c
+			JOIN conversation_members cm1 ON c.id = cm1.conversation_id
+			JOIN conversation_members cm2 ON c.id = cm2.conversation_id
+			WHERE cm1.user_id = ? AND cm2.user_id = ?
+			AND (
+				SELECT COUNT(*) 
+				FROM conversation_members cm3 
+				WHERE cm3.conversation_id = c.id
+			) = 2`, creator.Id, members[0])
+		if err != nil {
+			return conv, fmt.Errorf("error checking existing conversations: %w", err)
+		}
+		defer rows.Close()
+
+		if rows.Next() {
+			var existingConvId uint64
+			if err := rows.Scan(&existingConvId); err != nil {
+				return conv, fmt.Errorf("error scanning conversation ID: %w", err)
+			}
+			return db.GetConversation(creator.Id, existingConvId, nil)
+		}
+	}
+
+	// Create the conversation
 	res, err := db.c.Exec("INSERT INTO conversations(name, picture) VALUES (?, ?)", convName, "")
 	if err != nil {
-		return conv, err
+		return conv, fmt.Errorf("error creating conversation: %w", err)
 	}
+
 	convId, err := res.LastInsertId()
 	if err != nil {
-		return conv, err
+		return conv, fmt.Errorf("error getting conversation ID: %w", err)
 	}
+
 	conv.Id = uint64(convId)
 	conv.Name = convName
 	conv.Picture = ""
 
-	// IMPORTANT: Always add the creator to the conversation members.
+	// Add creator as member
 	_, err = db.c.Exec("INSERT INTO conversation_members(conversation_id, user_id) VALUES (?, ?)", conv.Id, creator.Id)
 	if err != nil {
-		return conv, err
+		return conv, fmt.Errorf("error adding creator to conversation: %w", err)
 	}
 
-	// Add additional members, if any.
+	// Add other members
 	for _, uid := range members {
-		_, err = db.c.Exec("INSERT OR IGNORE INTO conversation_members(conversation_id, user_id) VALUES (?, ?)", conv.Id, uid)
+		_, err = db.c.Exec("INSERT INTO conversation_members(conversation_id, user_id) VALUES (?, ?)", conv.Id, uid)
 		if err != nil {
-			return conv, err
+			return conv, fmt.Errorf("error adding member %d: %w", uid, err)
 		}
 	}
 
-	// Load the conversation members.
+	// Load the conversation members
 	conv.Members, err = db.getConversationMembers(conv.Id)
 	if err != nil {
-		return conv, err
+		return conv, fmt.Errorf("error getting conversation members: %w", err)
 	}
 
-	// Initialize the messages slice.
 	conv.Messages = []Message{}
-
 	return conv, nil
 }
 

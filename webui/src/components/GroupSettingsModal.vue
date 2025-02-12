@@ -39,6 +39,7 @@ import { ref, onMounted } from 'vue'
 import axios from '../services/axios'
 import ErrorMsg from './ErrorMsg.vue'
 import jwtDecode from 'jwt-decode'
+import { useRouter } from 'vue-router'
 
 const props = defineProps({
   conversation: {
@@ -64,6 +65,8 @@ if (!token) {
 const decoded = jwtDecode(token)
 const userId = Number(decoded.user_id)
 const convId = props.conversation.id
+
+const router = useRouter()
 
 async function fetchContacts() {
   try {
@@ -110,15 +113,19 @@ async function addMember() {
 
 async function leaveConversation() {
   if (!confirm("Are you sure you want to leave this conversation?")) return
+  
   processing.value = true
   errorMsg.value = null
+  
   try {
     await axios.delete(`/users/${userId}/conversations/${convId}/members`)
     emit("updated")
-    close()
+    router.push('/chats') // Redirect to chat list after leaving
   } catch (err) {
-    errorMsg.value = err.response?.data?.error || err.toString()
+    errorMsg.value = err.response?.data?.error || 
+      "You cannot leave this conversation. You might be the last member or this is a direct conversation."
   }
+  
   processing.value = false
 }
 

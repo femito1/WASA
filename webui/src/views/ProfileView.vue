@@ -48,17 +48,32 @@
   async function updateProfile() {
     updating.value = true
     errorMsg.value = null
+    
     try {
-      // Update username (PUT /users/:id)
-      await axios.put(`/users/${userId}`, { newName: newUsername.value })
-      // Update profile picture (PUT /users/:id/photo) if provided
+      // Try to update username
+      if (newUsername.value !== decoded.username) {
+        try {
+          await axios.put(`/users/${userId}`, { newName: newUsername.value })
+        } catch (err) {
+          if (err.response?.status === 500) {
+            errorMsg.value = "This username is already taken. Please choose another one."
+            updating.value = false
+            return
+          }
+          throw err
+        }
+      }
+      
+      // Update profile picture if provided
       if (newPhoto.value.trim()) {
         await axios.put(`/users/${userId}/photo`, { newPic: newPhoto.value })
       }
+      
       alert("Profile updated successfully!")
     } catch (err) {
       errorMsg.value = err.response?.data?.error || err.toString()
     }
+    
     updating.value = false
   }
   </script>

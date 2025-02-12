@@ -8,16 +8,25 @@
     <div class="chat-window border p-3 mb-3" style="height: 400px; overflow-y: auto;">
       <LoadingSpinner :loading="loading">
         <div v-if="!loading">
+          <div v-if="replyingTo" class="reply-preview alert alert-info">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                Replying to {{ replyingTo.senderName }}:
+                <br>
+                <small>{{ truncateContent(replyingTo.content) }}</small>
+              </div>
+              <button class="btn btn-sm btn-close" @click="replyingTo = null"></button>
+            </div>
+          </div>
           <div v-for="message in messages" :key="message.id">
-            <!-- Pass currentUserId prop to MessageItem -->
             <MessageItem
               :message="message"
               :currentUserId="userId"
               @react="handleReact"
+              @reply="handleReply"
               @forward="handleForward"
-              @comment="handleComment"
               @deleteMessage="handleDeleteMessage"
-              @deleteComment="handleDeleteComment"
+              @removeReaction="handleRemoveReaction"
             />
           </div>
         </div>
@@ -30,7 +39,7 @@
     </div>
     <form @submit.prevent="sendMessage">
       <div class="input-group">
-        <input v-model="newMessage" type="text" class="form-control" placeholder="Type your message..." :disabled="sending || selectedFile">
+        <input v-model="newMessage" type="text" class="form-control" :placeholder="replyingTo ? 'Type your reply...' : 'Type your message...'" :disabled="sending || selectedFile">
         <button class="btn btn-primary" type="submit" :disabled="sending">
           <span v-if="sending">Sending...</span>
           <span v-else>Send</span>
@@ -99,6 +108,8 @@ if (!token) {
 const decodedToken = jwtDecode(token)
 const userId = Number(decodedToken.user_id)
 
+const replyingTo = ref(null)
+
 async function fetchMessages() {
   loading.value = true
   errorMsg.value = null
@@ -122,42 +133,40 @@ function handleFileChange(e) {
 }
 
 async function sendMessage() {
-  if (selectedFile.value) {
-    sending.value = true
-    errorMsg.value = null
-    const reader = new FileReader()
-    reader.onload = async (e) => {
-      const base64Image = e.target.result
-      try {
-        // Send image message (format "image")
-        const payload = { content: base64Image, format: "image" }
-        const response = await axios.post(`/users/${userId}/conversations/${convId}/messages`, payload)
-        messages.value.push(response.data)
-        selectedFile.value = null
-        newMessage.value = ''
-      } catch (err) {
-        errorMsg.value = err.response?.data?.error || err.toString()
-      }
-      sending.value = false
+  if (!newMessage.value.trim() && !selectedFile.value) return
+  
+  sending.value = true
+  errorMsg.value = null
+  
+  try {
+    let content, format
+    
+    if (selectedFile.value) {
+      const base64 = await fileToBase64(selectedFile.value)
+      content = base64
+      format = 'image'
+    } else {
+      content = newMessage.value
+      format = 'string'
     }
-    reader.onerror = () => {
-      errorMsg.value = "Failed to read image file."
-      sending.value = false
+
+    const payload = {
+      content,
+      format,
+      replyTo: replyingTo.value?.id // Include reply reference if replying
     }
-    reader.readAsDataURL(selectedFile.value)
-  } else if (newMessage.value.trim()) {
-    sending.value = true
-    errorMsg.value = null
-    try {
-      const payload = { content: newMessage.value, format: "string" }
-      const response = await axios.post(`/users/${userId}/conversations/${convId}/messages`, payload)
-      messages.value.push(response.data)
-      newMessage.value = ''
-    } catch (err) {
-      errorMsg.value = err.response?.data?.error || err.toString()
-    }
-    sending.value = false
+
+    await axios.post(`/users/${userId}/conversations/${convId}/messages`, payload)
+    await fetchMessages()
+    
+    newMessage.value = ''
+    selectedFile.value = null
+    replyingTo.value = null
+  } catch (err) {
+    errorMsg.value = err.response?.data?.error || err.toString()
   }
+  
+  sending.value = false
 }
 
 // Handle reaction: open ReactionPicker modal for the selected message.
@@ -197,34 +206,11 @@ async function submitForward(targetConversationId) {
   selectedMessage.value = null
 }
 
-// Handle comment: prompt for comment text and POST comment.
-async function handleComment(message) {
-  const commentText = prompt("Enter your comment:")
-  if (!commentText) return
-  try {
-    await axios.post(`/users/${userId}/conversations/${convId}/messages/${message.id}/comment`, { commentText })
-    await fetchMessages()
-  } catch (err) {
-    errorMsg.value = err.response?.data?.error || err.toString()
-  }
-}
-
 // Handle delete message.
 async function handleDeleteMessage(message) {
   if (!confirm("Are you sure you want to delete this message?")) return
   try {
     await axios.delete(`/users/${userId}/conversations/${convId}/messages/${message.id}`)
-    await fetchMessages()
-  } catch (err) {
-    errorMsg.value = err.response?.data?.error || err.toString()
-  }
-}
-
-// Handle delete comment.
-async function handleDeleteComment(message, commentId) {
-  if (!confirm("Are you sure you want to delete this comment?")) return
-  try {
-    await axios.delete(`/users/${userId}/conversations/${convId}/messages/${message.id}/comment/${commentId}`)
     await fetchMessages()
   } catch (err) {
     errorMsg.value = err.response?.data?.error || err.toString()
@@ -238,6 +224,28 @@ function openGroupSettings() {
 
 async function refreshConversation() {
   await fetchMessages()
+}
+
+async function handleReply(message) {
+  replyingTo.value = message
+}
+
+async function handleRemoveReaction(message, emoji) {
+  try {
+    await axios.delete(`/users/${userId}/conversations/${convId}/messages/${message.id}/reaction/${emoji}`)
+    await fetchMessages()
+  } catch (err) {
+    errorMsg.value = err.response?.data?.error || err.toString()
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = error => reject(error)
+  })
 }
 
 onMounted(() => {
