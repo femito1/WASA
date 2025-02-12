@@ -125,20 +125,7 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 		http.Error(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
-
-	// Extract the user ID from the bearer token.
-	tokenUserID, err := ExtractUserIDFromToken(r)
-	if err != nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Ensure that the token's user ID matches the URL's user ID.
-	if tokenUserID != userId {
-		http.Error(w, "forbidden: you cannot update another user's details", http.StatusForbidden)
-		return
-	}
-
+	// Extract and validate convId and msgId.
 	convId, err := strconv.ParseUint(convIdStr, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid conversation id", http.StatusBadRequest)
@@ -162,11 +149,24 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 		http.Error(w, "user not found", http.StatusNotFound)
 		return
 	}
-	if err := rt.db.ForwardMessage(user, convId, msgId, reqPayload.TargetConversationId); err != nil {
+
+	// Verify that the target conversation exists and that the user is a member.
+	_, err = rt.db.GetConversation(userId, reqPayload.TargetConversationId, nil)
+	if err != nil {
+		http.Error(w, "target conversation not found or access denied", http.StatusBadRequest)
+		return
+	}
+
+	msg, err := rt.db.ForwardMessage(user, convId, msgId, reqPayload.TargetConversationId)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	if err := json.NewEncoder(w).Encode(msg); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode forwardMessage response")
+	}
 }
 
 // reactToMessage handles POST /users/:id/conversations/:convId/messages/:msgId/reaction.

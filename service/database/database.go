@@ -45,7 +45,7 @@ type AppDatabase interface {
 	// Message operations
 	CreateMessage(sender User, convId uint64, content string, format string, replyTo *uint64) (Message, error)
 	DeleteMessage(user User, convId, msgId uint64) error
-	ForwardMessage(user User, convId, msgId, targetConvId uint64) error
+	ForwardMessage(user User, convId, msgId, targetConvId uint64) (Message, error)
 	GetMessageByID(msgId uint64) (Message, error)
 
 	// Comment operations

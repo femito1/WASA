@@ -54,18 +54,33 @@ func (db *appdbimpl) DeleteMessage(user User, convId, msgId uint64) error {
 }
 
 // ForwardMessage forwards a message to another conversation.
-func (db *appdbimpl) ForwardMessage(user User, convId, msgId, targetConvId uint64) error {
-	// Retrieve the original message.
-	var content, format string
-	err := db.c.QueryRow("SELECT content, format FROM messages WHERE id = ? AND conversation_id = ?", msgId, convId).
-		Scan(&content, &format)
+func (db *appdbimpl) ForwardMessage(user User, convId, msgId, targetConvId uint64) (Message, error) {
+	// Retrieve the original message using GetMessageByID.
+	m, err := db.GetMessageByID(msgId)
 	if err != nil {
-		return err
+		return Message{}, err
 	}
+	// Ensure the message belongs to the conversation specified by convId.
+	if m.ConversationId != convId {
+		return Message{}, errors.New("message does not belong to the specified conversation")
+	}
+
 	// Insert a new message in the target conversation.
-	_, err = db.c.Exec("INSERT INTO messages(conversation_id, sender_id, content, format, state) VALUES (?, ?, ?, ?, ?)",
-		targetConvId, user.Id, content, format, "Sent")
-	return err
+	res, err := db.c.Exec("INSERT INTO messages(conversation_id, sender_id, content, format, state) VALUES (?, ?, ?, ?, ?)",
+		targetConvId, user.Id, m.Content, m.Format, "Sent")
+	if err != nil {
+		return Message{}, err
+	}
+	lastInsertId, err := res.LastInsertId()
+	if err != nil {
+		return Message{}, err
+	}
+	// Retrieve and return the new forwarded message.
+	newMsg, err := db.GetMessageByID(uint64(lastInsertId))
+	if err != nil {
+		return Message{}, err
+	}
+	return newMsg, nil
 }
 
 // ReactToMessage adds a reaction to a message.
@@ -142,12 +157,12 @@ func (db *appdbimpl) GetMessageByID(msgId uint64) (Message, error) {
 	var m Message
 	var replyTo sql.NullInt64
 	query := `
-	SELECT m.id, m.sender_id, u.username, m.content, m.format, m.state, m.timestamp, m.reply_to
+	SELECT m.id, m.conversation_id, m.sender_id, u.username, m.content, m.format, m.state, m.timestamp, m.reply_to
 	FROM messages m
 	JOIN users u ON m.sender_id = u.id
 	WHERE m.id = ?
 	`
-	err := db.c.QueryRow(query, msgId).Scan(&m.Id, &m.SenderId, &m.SenderName, &m.Content, &m.Format, &m.State, &m.Timestamp, &replyTo)
+	err := db.c.QueryRow(query, msgId).Scan(&m.Id, &m.ConversationId, &m.SenderId, &m.SenderName, &m.Content, &m.Format, &m.State, &m.Timestamp, &replyTo)
 	if err != nil {
 		return m, err
 	}

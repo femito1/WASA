@@ -12,7 +12,7 @@
           </select>
         </div>
         <div class="d-flex justify-content-end gap-2">
-          <button class="btn btn-secondary" @click="$emit('close')">Cancel</button>
+          <button class="btn btn-secondary" @click="emit('close')">Cancel</button>
           <button class="btn btn-primary" @click="forward">Forward</button>
         </div>
       </div>
@@ -28,6 +28,9 @@
   const props = defineProps({
     message: { type: Object, required: true }
   })
+  
+  // Define emits explicitly
+  const emit = defineEmits(['forward', 'close'])
   
   const targetConversationId = ref(null)
   const conversations = ref([])
@@ -57,7 +60,7 @@
   
   function forward() {
     // Emit the selected conversation ID for forwarding.
-    $emit('forward', targetConversationId.value)
+    emit('forward', targetConversationId.value)
   }
   
   onMounted(() => {
