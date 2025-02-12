@@ -59,8 +59,13 @@ func (db *appdbimpl) SetPhoto(u User, newPic string) (User, error) {
 	if affected == 0 {
 		return u, errors.New("no rows updated")
 	}
-	u.ProfilePicture = newPic
-	return u, nil
+	var updated User
+	err = db.c.QueryRow("SELECT id, username, profilePicture FROM users WHERE id = ?", u.Id).
+		Scan(&updated.Id, &updated.Username, &updated.ProfilePicture)
+	if err != nil {
+		return u, err
+	}
+	return updated, nil
 }
 
 // GetUserId fetches a user by username.

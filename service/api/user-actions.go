@@ -133,55 +133,32 @@ func (rt *_router) setMyUserName(w http.ResponseWriter, r *http.Request, ps http
 // setMyPhoto handles PUT /users/:id/photo.
 // It expects a JSON payload with { "newPic": string } and updates the user's profile picture.
 func (rt *_router) setMyPhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
-	var req struct {
-		NewPic string `json:"newPic"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Extract the user ID from the path parameter.
-	idStr := ps.ByName("id")
-	userId, err := strconv.ParseUint(idStr, 10, 64)
+	userIdStr := ps.ByName("id")
+	userId, err := strconv.ParseUint(userIdStr, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
-
-	// Extract the user ID from the bearer token.
-	tokenUserID, err := ExtractUserIDFromToken(r)
-	if err != nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	var reqPayload struct {
+		NewPic string `json:"newPic"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&reqPayload); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	// Ensure that the token's user ID matches the URL's user ID.
-	if tokenUserID != userId {
-		http.Error(w, "forbidden: you cannot update another user's details", http.StatusForbidden)
-		return
-	}
-
-	// Fetch the current user from the database.
 	dbUser, err := rt.db.CheckUserById(database.User{Id: userId})
 	if err != nil {
 		http.Error(w, "user not found", http.StatusNotFound)
 		return
 	}
-
-	// Update the profile picture.
-	updatedUser, err := rt.db.SetPhoto(dbUser, req.NewPic)
+	updatedUser, err := rt.db.SetPhoto(dbUser, reqPayload.NewPic)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// Return the updated user.
-	var user User
-	user.FromDatabase(updatedUser)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(user); err != nil {
+	if err := json.NewEncoder(w).Encode(updatedUser); err != nil {
 		ctx.Logger.WithError(err).Error("failed to encode setMyPhoto response")
 	}
 }

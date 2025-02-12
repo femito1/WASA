@@ -12,9 +12,12 @@
     <!-- Display forwarded indicator if the message is forwarded -->
     <div v-if="message.isForwarded" class="forwarded-label">Forwarded</div>
 
+    <!-- Message Header with Sender Photo -->
     <div class="message-header">
-      <strong>{{ message.senderName || 'Unknown' }}</strong>
-      <span class="separator">•</span>
+      <div class="d-flex align-items-center">
+        <img v-if="message.senderPicture" :src="message.senderPicture" alt="Sender Photo" class="sender-photo me-2" />
+        <strong>{{ message.senderName }}</strong>
+      </div>
       <small class="text-muted">{{ formatDate(message.timestamp) }}</small>
       <span class="message-status ms-2">
         {{ message.state === 'Read' ? '✓✓' : '✓' }}
@@ -152,5 +155,13 @@ function truncateContent(content) {
 .message-status {
   color: #28a745;
   font-size: 0.8em;
+}
+
+/* Style for sender profile picture */
+.sender-photo {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 </style>

@@ -8,8 +8,8 @@
           <input id="username" v-model="newUsername" type="text" class="form-control" required />
         </div>
         <div class="mb-3">
-          <label for="photo" class="form-label">Profile Picture (Base64):</label>
-          <textarea id="photo" v-model="newPhoto" class="form-control" rows="3" placeholder="Paste Base64 encoded image"></textarea>
+          <label for="photoUpload" class="form-label">Upload Profile Picture:</label>
+          <input id="photoUpload" type="file" accept="image/*" @change="handleFileChange" class="form-control" />
         </div>
         <button type="submit" class="btn btn-primary" :disabled="updating">
           <span v-if="updating">Updating...</span>
@@ -29,7 +29,7 @@
   
   const router = useRouter()
   const newUsername = ref('')
-  const newPhoto = ref('')
+  const selectedFile = ref(null)
   const updating = ref(false)
   const errorMsg = ref(null)
   
@@ -64,9 +64,10 @@
         }
       }
       
-      // Update profile picture if provided
-      if (newPhoto.value.trim()) {
-        await axios.put(`/users/${userId}/photo`, { newPic: newPhoto.value })
+      // Update profile picture if a new file was uploaded
+      if (selectedFile.value) {
+        const base64Data = await fileToBase64(selectedFile.value)
+        await axios.put(`/users/${userId}/photo`, { newPic: base64Data })
       }
       
       alert("Profile updated successfully!")
@@ -75,6 +76,23 @@
     }
     
     updating.value = false
+  }
+  
+  function handleFileChange(e) {
+    if (e.target.files && e.target.files.length > 0) {
+      selectedFile.value = e.target.files[0]
+    } else {
+      selectedFile.value = null
+    }
+  }
+  
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
   }
   </script>
   

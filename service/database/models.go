@@ -14,7 +14,8 @@ type Message struct {
 	ConversationId uint64     `json:"-"`
 	Id             uint64     `json:"id"`
 	SenderId       uint64     `json:"senderId"`
-	SenderName     string     `json:"senderName,omitempty"` // NEW field to hold the sender's username.
+	SenderName     string     `json:"senderName,omitempty"`    // NEW field to hold the sender's username.
+	SenderPicture  string     `json:"senderPicture,omitempty"` // NEW field for profile picture
 	Content        string     `json:"content"`
 	Format         string     `json:"format"`
 	State          string     `json:"state"`

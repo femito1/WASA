@@ -6,34 +6,21 @@ import (
 )
 
 func (db *appdbimpl) CreateMessage(sender User, convId uint64, content string, format string, replyTo *uint64) (Message, error) {
-	var msg Message
-	// Insert the message with state "Sent" and optional reply_to field.
 	res, err := db.c.Exec(
 		"INSERT INTO messages(conversation_id, sender_id, content, format, state, reply_to) VALUES (?, ?, ?, ?, ?, ?)",
 		convId, sender.Id, content, format, "Sent", replyTo,
 	)
 	if err != nil {
-		return msg, err
+		var empty Message
+		return empty, err
 	}
 	lastInsertId, err := res.LastInsertId()
 	if err != nil {
-		return msg, err
+		var empty Message
+		return empty, err
 	}
-	msg.Id = uint64(lastInsertId)
-	msg.ConversationId = convId
-	msg.SenderId = sender.Id
-	msg.SenderName = sender.Username
-	msg.Content = content
-	msg.Format = format
-	msg.State = "Sent"
-	// Retrieve the timestamp
-	err = db.c.QueryRow("SELECT timestamp FROM messages WHERE id = ?", msg.Id).Scan(&msg.Timestamp)
-	if err != nil {
-		return msg, err
-	}
-	// Set reply info (replyTo field remains nil here; it will be loaded when fetching conversation messages)
-	msg.Reactions = []Reaction{}
-	return msg, nil
+	// Instead of manually constructing a Message, fetch the complete record (which includes senderPicture)
+	return db.GetMessageByID(uint64(lastInsertId))
 }
 
 // DeleteMessage deletes a message from a conversation.
@@ -164,6 +151,7 @@ func (db *appdbimpl) GetMessageByID(msgId uint64) (Message, error) {
 	  m.conversation_id as conversationId, 
 	  m.sender_id as senderId, 
 	  u.username as senderName, 
+	  u.profilePicture as senderPicture, 
 	  m.content as content, 
 	  m.format as format, 
 	  m.state as state, 
@@ -176,7 +164,7 @@ func (db *appdbimpl) GetMessageByID(msgId uint64) (Message, error) {
 	`
 	var isForwarded int
 	err := db.c.QueryRow(query, msgId).Scan(
-		&m.Id, &m.ConversationId, &m.SenderId, &m.SenderName,
+		&m.Id, &m.ConversationId, &m.SenderId, &m.SenderName, &m.SenderPicture,
 		&m.Content, &m.Format, &m.State, &m.Timestamp, &replyTo, &isForwarded)
 	if err != nil {
 		return m, err

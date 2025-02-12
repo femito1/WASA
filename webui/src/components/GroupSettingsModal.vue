@@ -8,8 +8,8 @@
         <input id="groupName" v-model="groupName" type="text" class="form-control" />
       </div>
       <div class="mb-3">
-        <label for="groupPhoto" class="form-label">Conversation Photo (Base64):</label>
-        <textarea id="groupPhoto" v-model="groupPhoto" class="form-control" rows="2"></textarea>
+        <label for="groupPhotoUpload" class="form-label">Upload Conversation Photo:</label>
+        <input id="groupPhotoUpload" type="file" accept="image/*" @change="handleFileChange" class="form-control" />
       </div>
       <div class="mb-3">
         <label for="contactSelect" class="form-label">Add Member from Contacts:</label>
@@ -50,7 +50,6 @@ const props = defineProps({
 const emit = defineEmits(['updated', 'close'])
 
 const groupName = ref(props.conversation.name || '')
-const groupPhoto = ref(props.conversation.picture || '')
 const processing = ref(false)
 const addingMember = ref(false)
 const errorMsg = ref(null)
@@ -67,6 +66,9 @@ const userId = Number(decoded.user_id)
 const convId = props.conversation.id
 
 const router = useRouter()
+
+// Removed groupPhoto; using selectedFile instead
+const selectedFile = ref(null)
 
 async function fetchContacts() {
   try {
@@ -89,13 +91,33 @@ async function updateConversation() {
   errorMsg.value = null
   try {
     await axios.put(`/users/${userId}/conversations/${convId}/name`, { newName: groupName.value })
-    await axios.put(`/users/${userId}/conversations/${convId}/photo`, { newPhoto: groupPhoto.value })
+    if (selectedFile.value) {
+      const base64Data = await fileToBase64(selectedFile.value)
+      await axios.put(`/users/${userId}/conversations/${convId}/photo`, { newPhoto: base64Data })
+    }
     emit("updated")
     close()
   } catch (err) {
     errorMsg.value = err.response?.data?.error || err.toString()
   }
   processing.value = false
+}
+
+function handleFileChange(e) {
+  if (e.target.files && e.target.files.length > 0) {
+    selectedFile.value = e.target.files[0]
+  } else {
+    selectedFile.value = null
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
 }
 
 async function addMember() {
