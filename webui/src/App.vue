@@ -11,7 +11,7 @@
 			<RouterLink to="/profile" class="nav-link text-white me-2">Profile</RouterLink>
 			<div class="ms-auto d-flex align-items-center">
 			  <template v-if="isAuthenticated">
-				<span class="text-white me-2">Hello, {{ username }}</span>
+				<span class="text-white me-2">{{ username }}</span>
 				<button class="btn btn-sm btn-outline-light" @click="logout">Logout</button>
 			  </template>
 			  <template v-else>

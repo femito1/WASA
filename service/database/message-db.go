@@ -174,6 +174,12 @@ func (db *appdbimpl) GetMessageByID(msgId uint64) (Message, error) {
 		m.ReplyToID = &id
 	}
 	m.IsForwarded = isForwarded != 0
+	// Load reactions for the message.
+	reactions, err := db.getMessageReactions(m.Id)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return m, err
+	}
+	m.Reactions = reactions
 	return m, nil
 }
 

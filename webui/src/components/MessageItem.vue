@@ -15,7 +15,7 @@
     <!-- Message Header with Sender Photo -->
     <div class="message-header">
       <div class="d-flex align-items-center">
-        <img v-if="message.senderPicture" :src="message.senderPicture" alt="Sender Photo" class="sender-photo me-2" />
+        <img :src="message.senderPicture || defaultAvatar" alt="Sender Photo" class="sender-photo me-2" />
         <strong>{{ message.senderName }}</strong>
       </div>
       <small class="text-muted">{{ formatDate(message.timestamp) }}</small>
@@ -62,6 +62,7 @@
 
 <script setup>
 import { format } from 'date-fns'
+import defaultAvatar from '../assets/generic-avatar.png'  // Import the generic avatar image
 
 const props = defineProps({
   message: {

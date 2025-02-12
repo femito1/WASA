@@ -225,6 +225,21 @@ func (rt *_router) reactToMessage(w http.ResponseWriter, r *http.Request, ps htt
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// Broadcast reaction update event to all conversation members.
+	if msg, err := rt.db.GetMessageByID(msgId); err == nil {
+		if conv, err := rt.db.GetConversation(userId, convId, nil); err == nil {
+			var recipients []uint64
+			for _, member := range conv.Members {
+				recipients = append(recipients, member.Id)
+			}
+			rt.hub.broadcast <- &EventMessage{
+				Type:           "reaction_updated",
+				ConversationId: convId,
+				Payload:        msg,
+				Recipients:     recipients,
+			}
+		}
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -269,6 +284,21 @@ func (rt *_router) removeReaction(w http.ResponseWriter, r *http.Request, ps htt
 	if err := rt.db.RemoveReaction(user, convId, msgId, emoji); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	// Broadcast reaction update event after removal.
+	if msg, err := rt.db.GetMessageByID(msgId); err == nil {
+		if conv, err := rt.db.GetConversation(userId, convId, nil); err == nil {
+			var recipients []uint64
+			for _, member := range conv.Members {
+				recipients = append(recipients, member.Id)
+			}
+			rt.hub.broadcast <- &EventMessage{
+				Type:           "reaction_updated",
+				ConversationId: convId,
+				Payload:        msg,
+				Recipients:     recipients,
+			}
+		}
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

@@ -109,7 +109,6 @@ if (!token) {
 const decodedToken = jwtDecode(token)
 const userId = Number(decodedToken.user_id)
 const replyingTo = ref(null)
-const router = useRouter()
 
 async function fetchMessages() {
   loading.value = true
@@ -255,6 +254,13 @@ function handleRealtimeMessage(event) {
   // If a messages_read event is received, update the state.
   if (data.type === "messages_read" && data.conversationId === convId) {
     messages.value = messages.value.map(msg => ({ ...msg, state: "Read" }))
+  }
+
+  if (data.type === "reaction_updated" && data.conversationId === convId) {
+    const index = messages.value.findIndex(msg => msg.id === data.payload.id)
+    if (index !== -1) {
+      messages.value[index] = data.payload
+    }
   }
 }
 

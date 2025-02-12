@@ -37,7 +37,7 @@ func (db *appdbimpl) getConversationMembers(convId uint64) ([]User, error) {
 
 func (db *appdbimpl) getConversationMessages(convId uint64) ([]Message, error) {
 	query := `
-		SELECT m.id, m.sender_id, u.username, m.content, m.format, m.state, m.timestamp, m.reply_to, m.is_forwarded
+		SELECT m.id, m.sender_id, u.username, u.profilePicture, m.content, m.format, m.state, m.timestamp, m.reply_to, m.is_forwarded
 		FROM messages m
 		JOIN users u ON m.sender_id = u.id
 		WHERE m.conversation_id = ?
@@ -54,7 +54,7 @@ func (db *appdbimpl) getConversationMessages(convId uint64) ([]Message, error) {
 		var m Message
 		var replyTo sql.NullInt64
 		var isForwarded int
-		err = rows.Scan(&m.Id, &m.SenderId, &m.SenderName, &m.Content, &m.Format, &m.State, &m.Timestamp, &replyTo, &isForwarded)
+		err = rows.Scan(&m.Id, &m.SenderId, &m.SenderName, &m.SenderPicture, &m.Content, &m.Format, &m.State, &m.Timestamp, &replyTo, &isForwarded)
 		if err != nil {
 			return nil, err
 		}
