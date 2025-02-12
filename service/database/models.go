@@ -22,6 +22,7 @@ type Message struct {
 	Timestamp      string     `json:"timestamp,omitempty"`
 	ReplyToID      *uint64    `json:"replyToId,omitempty"`
 	ReplyTo        *Message   `json:"replyTo,omitempty"`
+	IsForwarded    bool       `json:"isForwarded"`
 }
 
 // Reaction represents an emoji reaction to a message.

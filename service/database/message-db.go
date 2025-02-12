@@ -65,9 +65,9 @@ func (db *appdbimpl) ForwardMessage(user User, convId, msgId, targetConvId uint6
 		return Message{}, errors.New("message does not belong to the specified conversation")
 	}
 
-	// Insert a new message in the target conversation.
-	res, err := db.c.Exec("INSERT INTO messages(conversation_id, sender_id, content, format, state) VALUES (?, ?, ?, ?, ?)",
-		targetConvId, user.Id, m.Content, m.Format, "Sent")
+	// Insert a new message in the target conversation with is_forwarded flagged.
+	res, err := db.c.Exec("INSERT INTO messages(conversation_id, sender_id, content, format, state, is_forwarded) VALUES (?, ?, ?, ?, ?, ?)",
+		targetConvId, user.Id, m.Content, m.Format, "Sent", 1)
 	if err != nil {
 		return Message{}, err
 	}
@@ -75,11 +75,13 @@ func (db *appdbimpl) ForwardMessage(user User, convId, msgId, targetConvId uint6
 	if err != nil {
 		return Message{}, err
 	}
-	// Retrieve and return the new forwarded message.
+	// Retrieve the new forwarded message.
 	newMsg, err := db.GetMessageByID(uint64(lastInsertId))
 	if err != nil {
 		return Message{}, err
 	}
+	// Force the forwarded flag to be true if not set properly
+	newMsg.IsForwarded = true
 	return newMsg, nil
 }
 
@@ -157,12 +159,25 @@ func (db *appdbimpl) GetMessageByID(msgId uint64) (Message, error) {
 	var m Message
 	var replyTo sql.NullInt64
 	query := `
-	SELECT m.id, m.conversation_id, m.sender_id, u.username, m.content, m.format, m.state, m.timestamp, m.reply_to
+	SELECT 
+	  m.id as id, 
+	  m.conversation_id as conversationId, 
+	  m.sender_id as senderId, 
+	  u.username as senderName, 
+	  m.content as content, 
+	  m.format as format, 
+	  m.state as state, 
+	  m.timestamp as timestamp, 
+	  m.reply_to as replyTo, 
+	  m.is_forwarded as isForwarded
 	FROM messages m
 	JOIN users u ON m.sender_id = u.id
 	WHERE m.id = ?
 	`
-	err := db.c.QueryRow(query, msgId).Scan(&m.Id, &m.ConversationId, &m.SenderId, &m.SenderName, &m.Content, &m.Format, &m.State, &m.Timestamp, &replyTo)
+	var isForwarded int
+	err := db.c.QueryRow(query, msgId).Scan(
+		&m.Id, &m.ConversationId, &m.SenderId, &m.SenderName,
+		&m.Content, &m.Format, &m.State, &m.Timestamp, &replyTo, &isForwarded)
 	if err != nil {
 		return m, err
 	}
@@ -170,5 +185,6 @@ func (db *appdbimpl) GetMessageByID(msgId uint64) (Message, error) {
 		id := uint64(replyTo.Int64)
 		m.ReplyToID = &id
 	}
+	m.IsForwarded = isForwarded != 0
 	return m, nil
 }

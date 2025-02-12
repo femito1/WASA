@@ -197,13 +197,23 @@ function handleForward(message) {
 // Submit forward (POST /users/:id/conversations/:convId/messages/:msgId/forward)
 async function submitForward(targetConversationId) {
   try {
-    await axios.post(`/users/${userId}/conversations/${convId}/messages/${selectedMessage.value.id}/forward`, { targetConversationId })
-    // Optionally, you might show a success message.
+    await axios.post(
+      `/users/${userId}/conversations/${convId}/messages/${selectedMessage.value.id}/forward`,
+      { targetConversationId }
+    );
+
+    // If forwarding within the same conversation, update the list so the forwarded message (with forwarded indicator)
+    // is visible. Otherwise, notify the user (e.g., via a toast or alert).
+    if (targetConversationId === convId) {
+      await fetchMessages();
+    } else {
+      alert("Message forwarded successfully to the selected conversation.");
+    }
   } catch (err) {
-    errorMsg.value = err.response?.data?.error || err.toString()
+    errorMsg.value = err.response?.data?.error || err.toString();
   }
-  showForwardModal.value = false
-  selectedMessage.value = null
+  showForwardModal.value = false;
+  selectedMessage.value = null;
 }
 
 // Handle delete message.

@@ -127,6 +127,7 @@ func New(db *sql.DB) (AppDatabase, error) {
 		content TEXT NOT NULL,
 		format TEXT NOT NULL,
 		state TEXT NOT NULL,
+		is_forwarded INTEGER NOT NULL DEFAULT 0,
 		reply_to INTEGER,
 		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,

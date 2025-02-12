@@ -1,12 +1,17 @@
 <!-- File: webui/src/components/MessageItem.vue -->
 <template>
   <div class="mb-2 message-item">
-    <!-- Reply reference if this is a reply -->
-    <div v-if="message.replyTo" class="reply-reference mb-2 ps-2 border-start">
-      <small class="text-muted">Replying to {{ message.replyTo.senderName }}:</small>
-      <div class="reply-content text-muted">{{ truncateContent(message.replyTo.content) }}</div>
+    <!-- Reply reference for messages (if any) -->
+    <div v-if="message.replyTo" class="reply-reference">
+      <div class="reply-info">
+        <span class="reply-sender">{{ message.replyTo.senderName }}</span>
+        <span class="reply-snippet">{{ truncateContent(message.replyTo.content) }}</span>
+      </div>
     </div>
-    
+
+    <!-- Display forwarded indicator if the message is forwarded -->
+    <div v-if="message.isForwarded" class="forwarded-label">Forwarded</div>
+
     <div class="message-header">
       <strong>{{ message.senderName || 'Unknown' }}</strong>
       <span class="separator">•</span>
@@ -101,10 +106,47 @@ function truncateContent(content) {
   user-select: none;
 }
 
+/* New styles for WhatsApp-like reply reference */
 .reply-reference {
-  background: #f8f9fa;
-  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-left: 3px solid #25D366;
+  padding-left: 8px;
+  margin-bottom: 4px;
+  background: #e9f7f1;
   border-radius: 4px;
+}
+
+.reply-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.reply-sender {
+  font-weight: bold;
+  color: #075e54;
+  font-size: 0.9em;
+}
+
+.reply-snippet {
+  color: #333;
+  font-size: 0.85em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Style for forwarded messages */
+.forwarded-label {
+  font-size: 0.8em;
+  color: #555;
+  opacity: 0.8;
+  margin-bottom: 4px;
+  font-style: italic;
+}
+
+.message-header .separator {
+  margin: 0 4px;
 }
 
 .message-status {
