@@ -1,7 +1,7 @@
 <!-- File: webui/src/views/ChatView.vue -->
 <template>
   <div class="container mt-3">
-    <h1>Chat Conversation</h1>
+    <h1>{{ conversation.name }}</h1>
     <button v-if="conversation && conversation.members && conversation.members.length >= 1" class="btn btn-sm btn-outline-secondary ms-2" @click="openGroupSettings">
       Conversation Settings
     </button>
@@ -74,9 +74,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import axios from '../services/axios'
+import realtime from '../services/realtime'
 import LoadingSpinner from '../components/LoadingSpinner.vue'
 import ErrorMsg from '../components/ErrorMsg.vue'
 import MessageItem from '../components/MessageItem.vue'
@@ -86,7 +87,7 @@ import GroupSettingsModal from '../components/GroupSettingsModal.vue'
 import jwtDecode from 'jwt-decode'
 
 const route = useRoute()
-const convId = route.params.convId
+const convId = Number(route.params.convId)
 const selectedFile = ref(null)
 const messages = ref([])
 const newMessage = ref('')
@@ -107,16 +108,15 @@ if (!token) {
 }
 const decodedToken = jwtDecode(token)
 const userId = Number(decodedToken.user_id)
-
 const replyingTo = ref(null)
+const router = useRouter()
 
 async function fetchMessages() {
   loading.value = true
   errorMsg.value = null
   try {
-    // API endpoint: GET /users/:id/conversations/:convId
     const response = await axios.get(`/users/${userId}/conversations/${convId}`)
-    conversation.value = response.data  // Save entire conversation (may include updated members, name, photo)
+    conversation.value = response.data
     messages.value = response.data.messages || []
   } catch (err) {
     errorMsg.value = err.response?.data?.error || err.toString()
@@ -137,10 +137,9 @@ async function sendMessage() {
   
   sending.value = true
   errorMsg.value = null
-  
+
   try {
     let content, format
-    
     if (selectedFile.value) {
       const base64 = await fileToBase64(selectedFile.value)
       content = base64
@@ -153,12 +152,11 @@ async function sendMessage() {
     const payload = {
       content,
       format,
-      replyTo: replyingTo.value?.id // Include reply reference if replying
+      replyTo: replyingTo.value?.id
     }
 
     await axios.post(`/users/${userId}/conversations/${convId}/messages`, payload)
     await fetchMessages()
-    
     newMessage.value = ''
     selectedFile.value = null
     replyingTo.value = null
@@ -169,17 +167,14 @@ async function sendMessage() {
   sending.value = false
 }
 
-// Handle reaction: open ReactionPicker modal for the selected message.
 function handleReact(message) {
   selectedMessage.value = message
   showReactionPicker.value = true
 }
 
-// Submit reaction (POST /users/:id/conversations/:convId/messages/:msgId/reaction)
 async function submitReaction(emoji) {
   try {
     await axios.post(`/users/${userId}/conversations/${convId}/messages/${selectedMessage.value.id}/reaction`, { emoji })
-    // Refresh messages after reacting.
     await fetchMessages()
   } catch (err) {
     errorMsg.value = err.response?.data?.error || err.toString()
@@ -188,35 +183,29 @@ async function submitReaction(emoji) {
   selectedMessage.value = null
 }
 
-// Handle forward: open ForwardMessageModal.
 function handleForward(message) {
   selectedMessage.value = message
   showForwardModal.value = true
 }
 
-// Submit forward (POST /users/:id/conversations/:convId/messages/:msgId/forward)
 async function submitForward(targetConversationId) {
   try {
     await axios.post(
       `/users/${userId}/conversations/${convId}/messages/${selectedMessage.value.id}/forward`,
       { targetConversationId }
-    );
-
-    // If forwarding within the same conversation, update the list so the forwarded message (with forwarded indicator)
-    // is visible. Otherwise, notify the user (e.g., via a toast or alert).
+    )
     if (targetConversationId === convId) {
-      await fetchMessages();
+      await fetchMessages()
     } else {
-      alert("Message forwarded successfully to the selected conversation.");
+      alert("Message forwarded successfully to the selected conversation.")
     }
   } catch (err) {
-    errorMsg.value = err.response?.data?.error || err.toString();
+    errorMsg.value = err.response?.data?.error || err.toString()
   }
-  showForwardModal.value = false;
-  selectedMessage.value = null;
+  showForwardModal.value = false
+  selectedMessage.value = null
 }
 
-// Handle delete message.
 async function handleDeleteMessage(message) {
   if (!confirm("Are you sure you want to delete this message?")) return
   try {
@@ -227,7 +216,6 @@ async function handleDeleteMessage(message) {
   }
 }
 
-// For group conversations: open group settings if conversation is a group (more than 2 members)
 function openGroupSettings() {
   showGroupSettings.value = true
 }
@@ -258,8 +246,25 @@ function fileToBase64(file) {
   })
 }
 
+function handleRealtimeMessage(event) {
+  const data = JSON.parse(event.data)
+  // If a new message is received for the open conversation, append it.
+  if (data.type === "new_message" && data.conversationId === convId) {
+    messages.value.push(data.payload)
+  }
+  // If a messages_read event is received, update the state.
+  if (data.type === "messages_read" && data.conversationId === convId) {
+    messages.value = messages.value.map(msg => ({ ...msg, state: "Read" }))
+  }
+}
+
 onMounted(() => {
   fetchMessages()
+  realtime.addEventListener("message", handleRealtimeMessage)
+})
+
+onBeforeUnmount(() => {
+  realtime.removeEventListener("message", handleRealtimeMessage)
 })
 </script>
 

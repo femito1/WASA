@@ -121,6 +121,17 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 		return
 	}
 
+	// Mark messages as read for the current user (i.e. messages not sent by this user)
+	currentUser, err := rt.db.CheckUserById(database.User{Id: userID})
+	if err != nil {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+	if err = rt.db.MarkMessagesAsRead(currentUser, convID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	conv, err := rt.db.GetConversation(userID, convID, nil)
 	if err != nil {
 		if err.Error() == "user is not a member of this conversation" {

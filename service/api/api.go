@@ -79,10 +79,13 @@ func New(cfg Config) (Router, error) {
 	router.RedirectTrailingSlash = false
 	router.RedirectFixedPath = false
 
+	hub := NewHub()
+	go hub.Run()
 	return &_router{
 		router:     router,
 		baseLogger: cfg.Logger,
 		db:         cfg.Database,
+		hub:        hub,
 	}, nil
 }
 
@@ -93,5 +96,6 @@ type _router struct {
 	// Use context logger if available (e.g., in requests) instead of this logger.
 	baseLogger logrus.FieldLogger
 
-	db database.AppDatabase
+	db  database.AppDatabase
+	hub *Hub
 }

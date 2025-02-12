@@ -176,3 +176,9 @@ func (db *appdbimpl) GetMessageByID(msgId uint64) (Message, error) {
 	m.IsForwarded = isForwarded != 0
 	return m, nil
 }
+
+// MarkMessagesAsRead sets the state of all messages in a conversation that are not sent by the user to "Read".
+func (db *appdbimpl) MarkMessagesAsRead(user User, convId uint64) error {
+	_, err := db.c.Exec("UPDATE messages SET state = 'Read' WHERE conversation_id = ? AND sender_id != ? AND state != 'Read'", convId, user.Id)
+	return err
+}

@@ -58,3 +58,17 @@ func ExtractUserIDFromToken(r *http.Request) (uint64, error) {
 	}
 	return 0, errors.New("invalid token")
 }
+
+// ExtractUserIDFromTokenString extracts the user ID from a token string.
+func ExtractUserIDFromTokenString(tokenStr string) (uint64, error) {
+	token, err := jwt.ParseWithClaims(tokenStr, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return jwtSecret, nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	if claims, ok := token.Claims.(*CustomClaims); ok && token.Valid {
+		return claims.UserID, nil
+	}
+	return 0, errors.New("invalid token")
+}

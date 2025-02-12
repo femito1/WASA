@@ -30,6 +30,7 @@ func (rt *_router) Handler() http.Handler {
 
 	// Reactions
 	rt.router.POST("/users/:id/conversations/:convId/messages/:msgId/reaction", rt.wrap(rt.reactToMessage))
+	rt.router.DELETE("/users/:id/conversations/:convId/messages/:msgId/reaction/:emoji", rt.wrap(rt.removeReaction))
 
 	// Comments
 	rt.router.POST("/users/:id/conversations/:convId/messages/:msgId/comment", rt.wrap(rt.commentMessage))
@@ -40,6 +41,9 @@ func (rt *_router) Handler() http.Handler {
 	rt.router.POST("/users/:id/contacts", rt.wrap(rt.addContact))
 	rt.router.GET("/users/:id/contacts", rt.wrap(rt.listContacts))
 	rt.router.DELETE("/users/:id/contacts/:contactId", rt.wrap(rt.removeContact))
+
+	// WebSocket endpoint for realtime updates
+	rt.router.GET("/ws", rt.serveWs)
 
 	// Special routes
 	rt.router.GET("/liveness", rt.liveness)

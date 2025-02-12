@@ -14,7 +14,6 @@
     </LoadingSpinner>
     <ErrorMsg v-if="errorMsg" :msg="errorMsg" />
     <div class="mt-3">
-      <input v-model="searchTerm" type="text" placeholder="Search users..." class="form-control mb-2" />
       <button class="btn btn-primary" @click="searchUsers">Search and Add Contact</button>
     </div>
     <ul v-if="searchedUsers.length" class="list-group mt-2">

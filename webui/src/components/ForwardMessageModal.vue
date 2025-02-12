@@ -7,7 +7,7 @@
           <label for="targetConv">Select Conversation:</label>
           <select id="targetConv" v-model="targetConversationId" class="form-select">
             <option v-for="conv in conversations" :key="conv.id" :value="conv.id">
-              {{ conv.name || 'Unnamed Conversation' }}
+              {{ conv.name  }}
             </option>
           </select>
         </div>

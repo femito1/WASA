@@ -37,7 +37,7 @@ func (db *appdbimpl) getConversationMembers(convId uint64) ([]User, error) {
 
 func (db *appdbimpl) getConversationMessages(convId uint64) ([]Message, error) {
 	query := `
-		SELECT m.id, m.sender_id, u.username, m.content, m.format, m.state, m.timestamp, m.reply_to
+		SELECT m.id, m.sender_id, u.username, m.content, m.format, m.state, m.timestamp, m.reply_to, m.is_forwarded
 		FROM messages m
 		JOIN users u ON m.sender_id = u.id
 		WHERE m.conversation_id = ?
@@ -53,7 +53,8 @@ func (db *appdbimpl) getConversationMessages(convId uint64) ([]Message, error) {
 	for rows.Next() {
 		var m Message
 		var replyTo sql.NullInt64
-		err = rows.Scan(&m.Id, &m.SenderId, &m.SenderName, &m.Content, &m.Format, &m.State, &m.Timestamp, &replyTo)
+		var isForwarded int
+		err = rows.Scan(&m.Id, &m.SenderId, &m.SenderName, &m.Content, &m.Format, &m.State, &m.Timestamp, &replyTo, &isForwarded)
 		if err != nil {
 			return nil, err
 		}
@@ -67,6 +68,7 @@ func (db *appdbimpl) getConversationMessages(convId uint64) ([]Message, error) {
 			id := uint64(replyTo.Int64)
 			m.ReplyToID = &id
 		}
+		m.IsForwarded = isForwarded != 0
 		// Load reactions (if applicable).
 		m.Reactions, err = db.getMessageReactions(m.Id)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {

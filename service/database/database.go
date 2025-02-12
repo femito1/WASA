@@ -47,6 +47,7 @@ type AppDatabase interface {
 	DeleteMessage(user User, convId, msgId uint64) error
 	ForwardMessage(user User, convId, msgId, targetConvId uint64) (Message, error)
 	GetMessageByID(msgId uint64) (Message, error)
+	MarkMessagesAsRead(user User, convId uint64) error
 
 	// Comment operations
 	CommentMessage(user User, convId, msgId uint64, commentText string) (uint64, error)
@@ -59,6 +60,7 @@ type AppDatabase interface {
 
 	// Message reactions
 	ReactToMessage(user User, convId, msgId uint64, emoji string) error
+	RemoveReaction(user User, convId, msgId uint64, emoji string) error
 }
 
 // appdbimpl is the concrete implementation of AppDatabase.
