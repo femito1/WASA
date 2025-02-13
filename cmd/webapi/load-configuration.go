@@ -29,7 +29,6 @@ type WebAPIConfiguration struct {
 	}
 }
 
-// loadConfiguration creates a WebAPIConfiguration from flags, environment variables and a configuration file.
 func loadConfiguration() (WebAPIConfiguration, error) {
 	var cfg WebAPIConfiguration
 
@@ -40,7 +39,6 @@ func loadConfiguration() (WebAPIConfiguration, error) {
 			if err2 != nil {
 				return cfg, err2
 			}
-			// Use logger instead of fmt.Println
 			logrus.Info(usage)
 			return cfg, conf.ErrHelpWanted
 		}
@@ -60,7 +58,10 @@ func loadConfiguration() (WebAPIConfiguration, error) {
 		if err != nil {
 			return cfg, err
 		}
-		_ = fp.Close()
+		err = fp.Close()
+		if err != nil {
+			return cfg, err
+		}
 	}
 
 	return cfg, nil

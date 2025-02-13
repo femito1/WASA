@@ -4,9 +4,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
+	"github.com/sirupsen/logrus"
 )
 
 var ErrConversationNotFound = errors.New("conversation not found")
+var logger = logrus.New()
 
 // getConversationMembers retrieves the members of a conversation.
 func (db *appdbimpl) getConversationMembers(convId uint64) ([]User, error) {
@@ -20,7 +23,12 @@ func (db *appdbimpl) getConversationMembers(convId uint64) ([]User, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.WithError(err).Error("error closing conversation members rows")
+		}
+	}()
 	var members []User
 	for rows.Next() {
 		var u User
@@ -47,7 +55,12 @@ func (db *appdbimpl) getConversationMessages(convId uint64) ([]Message, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.WithError(err).Error("error closing conversation messages rows")
+		}
+	}()
 
 	var messages []Message
 	for rows.Next() {
@@ -94,16 +107,6 @@ func (db *appdbimpl) CreateConversation(creator User, convName string, members [
 
 	// For direct conversations (just one other member)
 	if len(members) == 1 {
-		// Check if the other user is in creator's contacts
-		var count int
-		err := db.c.QueryRow("SELECT COUNT(*) FROM contacts WHERE user_id = ? AND contact_id = ?",
-			creator.Id, members[0]).Scan(&count)
-		if err != nil {
-			return conv, fmt.Errorf("error checking contacts: %w", err)
-		}
-		if count == 0 {
-			return conv, errors.New("cannot create conversation: user not in contacts")
-		}
 
 		// Check if a direct conversation already exists between these users
 		rows, err := db.c.Query(`
@@ -120,7 +123,12 @@ func (db *appdbimpl) CreateConversation(creator User, convName string, members [
 		if err != nil {
 			return conv, fmt.Errorf("error checking existing conversations: %w", err)
 		}
-		defer rows.Close()
+		defer func() {
+			err := rows.Close()
+			if err != nil {
+				logger.WithError(err).Error("error closing conversation rows")
+			}
+		}()
 
 		if rows.Next() {
 			var existingConvId uint64
@@ -128,6 +136,9 @@ func (db *appdbimpl) CreateConversation(creator User, convName string, members [
 				return conv, fmt.Errorf("error scanning conversation ID: %w", err)
 			}
 			return db.GetConversation(creator.Id, existingConvId, nil)
+		}
+		if rows.Err() != nil {
+			return conv, fmt.Errorf("error iterating through existing conversations: %w", rows.Err())
 		}
 	}
 
@@ -182,7 +193,12 @@ func (db *appdbimpl) GetConversations(userId uint64) ([]Conversation, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.WithError(err).Error("error closing conversations rows")
+		}
+	}()
 
 	var convs []Conversation
 	for rows.Next() {

@@ -136,7 +136,12 @@ func (db *appdbimpl) ListUsers(nameFilter string) ([]User, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.WithError(err).Error("error closing users rows")
+		}
+	}()
 	var users []User
 	for rows.Next() {
 		var u User

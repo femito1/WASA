@@ -48,7 +48,11 @@ func (rt *_router) createGroup(w http.ResponseWriter, r *http.Request, ps httpro
 	}
 	// Payload is optional.
 	if r.Body != nil {
-		_ = json.NewDecoder(r.Body).Decode(&reqPayload)
+		err = json.NewDecoder(r.Body).Decode(&reqPayload)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 	conv, err := rt.db.CreateConversation(creator, reqPayload.Name, reqPayload.Members)
 	if err != nil {

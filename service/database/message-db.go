@@ -123,8 +123,12 @@ func (db *appdbimpl) getMessageReactions(msgId uint64) ([]Reaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.WithError(err).Error("error closing reactions rows")
+		}
+	}()
 	var reactions []Reaction
 	for rows.Next() {
 		var r Reaction

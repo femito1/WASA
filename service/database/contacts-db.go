@@ -34,7 +34,13 @@ func (db *appdbimpl) ListContacts(userID uint64) ([]User, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.WithError(err).Error("error closing contacts rows")
+			return
+		}
+	}()
 	var contacts []User
 	for rows.Next() {
 		var u User

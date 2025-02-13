@@ -57,7 +57,10 @@ func run() error {
 	}
 	defer func() {
 		logger.Debug("database stopping")
-		_ = dbconn.Close()
+		err = dbconn.Close()
+		if err != nil {
+			logger.WithError(err).Error("error closing SQLite DB")
+		}
 	}()
 	db, err := database.New(dbconn)
 	if err != nil {
@@ -101,7 +104,7 @@ func run() error {
 	go func() {
 		logger.Infof("API listening on %s", apiserver.Addr)
 		err := apiserver.ListenAndServe()
-		// Log the return value from ListenAndServe to explicitly check the error.
+		// Log the return value from ListenAndServe
 		if err != nil {
 			logger.WithError(err).Info("ListenAndServe returned")
 		}
@@ -127,7 +130,10 @@ func run() error {
 
 		if err := apiserver.Shutdown(ctx); err != nil {
 			logger.WithError(err).Warn("error during graceful shutdown of HTTP server")
-			_ = apiserver.Close()
+			err = apiserver.Close()
+			if err != nil {
+				logger.WithError(err).Error("error closing HTTP server")
+			}
 		}
 
 		if sig == syscall.SIGSTOP {
