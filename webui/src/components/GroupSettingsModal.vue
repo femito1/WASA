@@ -12,10 +12,10 @@
         <input id="groupPhotoUpload" type="file" accept="image/*" @change="handleFileChange" class="form-control" />
       </div>
       <div class="mb-3">
-        <label for="contactSelect" class="form-label">Add Member from Contacts:</label>
-        <select id="contactSelect" v-model="selectedContactId" class="form-select">
-          <option v-for="contact in contacts" :key="contact.id" :value="contact.id">
-            {{ contact.username }}
+        <label for="userSelect" class="form-label">Add Member:</label>
+        <select id="userSelect" v-model="selectedUserId" class="form-select">
+          <option v-for="u in users" :key="u.id" :value="u.id">
+            {{ u.username }}
           </option>
         </select>
         <button class="btn btn-secondary mt-2" @click="addMember" :disabled="addingMember">
@@ -54,8 +54,8 @@ const processing = ref(false)
 const addingMember = ref(false)
 const errorMsg = ref(null)
 
-const contacts = ref([])
-const selectedContactId = ref(null)
+const users = ref([])
+const selectedUserId = ref(null)
 
 const token = localStorage.getItem("authToken")
 if (!token) {
@@ -70,12 +70,12 @@ const router = useRouter()
 // Removed groupPhoto; using selectedFile instead
 const selectedFile = ref(null)
 
-async function fetchContacts() {
+async function fetchUsers() {
   try {
-    const response = await axios.get(`/users/${userId}/contacts`)
-    contacts.value = response.data
-    if (contacts.value.length > 0) {
-      selectedContactId.value = contacts.value[0].id
+    const response = await axios.get(`/users`)
+    users.value = response.data
+    if (users.value.length > 0) {
+      selectedUserId.value = users.value[0].id
     }
   } catch (err) {
     errorMsg.value = err.response?.data?.error || err.toString()
@@ -83,7 +83,7 @@ async function fetchContacts() {
 }
 
 onMounted(() => {
-  fetchContacts()
+  fetchUsers()
 })
 
 async function updateConversation() {
@@ -121,11 +121,11 @@ function fileToBase64(file) {
 }
 
 async function addMember() {
-  if (!selectedContactId.value) return
+  if (!selectedUserId.value) return
   addingMember.value = true
   errorMsg.value = null
   try {
-    await axios.post(`/users/${userId}/conversations/${convId}/members`, { userIdToAdd: selectedContactId.value })
+    await axios.post(`/users/${userId}/conversations/${convId}/members`, { userIdToAdd: selectedUserId.value })
     emit("updated")
   } catch (err) {
     errorMsg.value = err.response?.data?.error || err.toString()

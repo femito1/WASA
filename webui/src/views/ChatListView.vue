@@ -16,16 +16,15 @@
     <ErrorMsg v-if="errorMsg" :msg="errorMsg" />
     <button class="btn btn-primary mt-3" @click="showNewConversationModal">New Conversation</button>
 
-    <!-- New Conversation Modal -->
     <div v-if="showModal" class="modal-overlay">
       <div class="modal-content">
         <h5>Start New Conversation</h5>
         <div class="mb-3">
-          <label class="form-label">Select Contact:</label>
-          <select v-model="selectedContactId" class="form-select">
-            <option value="">Choose a contact...</option>
-            <option v-for="contact in contacts" :key="contact.id" :value="contact.id">
-              {{ contact.username }}
+          <label class="form-label">Select User:</label>
+          <select v-model="selectedUserId" class="form-select">
+            <option value="">Choose a user...</option>
+            <option v-for="u in users" :key="u.id" :value="u.id">
+              {{ u.username }}
             </option>
           </select>
         </div>
@@ -41,7 +40,7 @@
         </div>
         <div class="d-flex justify-content-end gap-2">
           <button class="btn btn-secondary" @click="closeModal">Cancel</button>
-          <button class="btn btn-primary" @click="createConversation" :disabled="!selectedContactId || !conversationName">
+          <button class="btn btn-primary" @click="createConversation" :disabled="!selectedUserId || !conversationName">
             Start Conversation
           </button>
         </div>
@@ -61,11 +60,11 @@ import ConversationItem from '../components/ConversationItem.vue'
 import jwtDecode from 'jwt-decode'
 
 const conversations = ref([])
-const contacts = ref([])
+const users = ref([])
 const loading = ref(false)
 const errorMsg = ref(null)
 const showModal = ref(false)
-const selectedContactId = ref('')
+const selectedUserId = ref('')
 const conversationName = ref('')
 
 const router = useRouter()
@@ -77,10 +76,10 @@ if (!token) {
 const decodedToken = jwtDecode(token)
 const userId = decodedToken.user_id
 
-async function fetchContacts() {
+async function fetchUsers() {
   try {
-    const response = await axios.get(`/users/${userId}/contacts`)
-    contacts.value = response.data
+    const response = await axios.get(`/users`)
+    users.value = response.data
   } catch (err) {
     errorMsg.value = err.response?.data?.error || err.toString()
   }
@@ -99,8 +98,8 @@ async function fetchConversations() {
 }
 
 function showNewConversationModal() {
-  if (contacts.value.length === 0) {
-    errorMsg.value = "You need to add contacts first before starting a conversation"
+  if (users.value.length === 0) {
+    errorMsg.value = "No users found"
     return
   }
   showModal.value = true
@@ -108,13 +107,13 @@ function showNewConversationModal() {
 
 function closeModal() {
   showModal.value = false
-  selectedContactId.value = ""
+  selectedUserId.value = ""
   conversationName.value = ""
 }
 
 async function createConversation() {
-  if (!selectedContactId.value) {
-    errorMsg.value = "Please select a contact"
+  if (!selectedUserId.value) {
+    errorMsg.value = "Please select a user"
     return
   }
   if (!conversationName.value) {
@@ -124,7 +123,7 @@ async function createConversation() {
   try {
     const response = await axios.post(`/users/${userId}/conversations`, {
       name: conversationName.value,
-      members: [selectedContactId.value]
+      members: [selectedUserId.value]
     })
     closeModal()
     await fetchConversations()
@@ -159,7 +158,7 @@ function handleRealtimeMessage(event) {
 
 onMounted(() => {
   fetchConversations()
-  fetchContacts()
+  fetchUsers()
   realtime.addEventListener("message", handleRealtimeMessage)
 })
 
