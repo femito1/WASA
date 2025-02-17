@@ -1,11 +1,3 @@
-# Fantastic coffee (decaffeinated)
-
-This repository contains the basic structure for [Web and Software Architecture](http://gamificationlab.uniroma1.it/en/wasa/) homework project.
-It has been described in class.
-
-"Fantastic coffee (decaffeinated)" is a simplified version for the WASA course, not suitable for a production environment.
-The full version can be found in the "Fantastic Coffee" repository.
-
 ## Project structure
 
 * `cmd/` contains all executables; Go programs here should only do "executable-stuff", like reading options from the CLI/env, etc.
