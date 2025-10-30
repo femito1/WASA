@@ -47,6 +47,7 @@ You need to:
 ## How to run with docker compose (recommended)
 
 ```shell
+# first cd to the project's parent directoy
 docker compose up -d
 ```
 
