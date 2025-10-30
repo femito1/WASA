@@ -48,7 +48,10 @@ You need to:
 
 ```shell
 # first cd to the project's parent directoy
+
 docker compose up -d
+
+#once finished, access the project's frontend at https://localhost:80
 ```
 
 ## License
