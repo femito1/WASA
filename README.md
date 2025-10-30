@@ -47,8 +47,13 @@ You need to:
 ## How to run with docker compose (recommended)
 
 ```shell
-# first cd to the project's parent directoy
+# clone project into directory of choice (e.g. wasa)
+git clone https://github.com/femito1/WASA.git wasa
 
+# cd to the project's parent directory (wasa in this case)
+cd wasa
+
+# make sure docker engine is running (e.g. Docker Desktop)
 docker compose up -d
 
 #once finished, access the project's frontend at https://localhost:80
