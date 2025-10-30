@@ -44,62 +44,10 @@ You need to:
 * Update the code in `run()` function (`cmd/webapi/main.go`) to connect to databases or external resources
 * Write API code inside `service/api`, and create any further package inside `service/` (or subdirectories)
 
-## How to build
-
-If you're not using the WebUI, or if you don't want to embed the WebUI into the final executable, then:
+## How to run with docker compose (recommended)
 
 ```shell
-go build ./cmd/webapi/
-```
-
-If you're using the WebUI and you want to embed it into the final executable:
-
-```shell
-./open-node.sh
-# (here you're inside the container)
-yarn run build-embed
-exit
-# (outside the container)
-go build -tags webui ./cmd/webapi/
-```
-
-## How to run (in development mode)
-
-You can launch the backend only using:
-
-```shell
-go run ./cmd/webapi/
-```
-
-If you want to launch the WebUI, open a new tab and launch:
-
-```shell
-./open-node.sh
-# (here you're inside the container)
-yarn run dev
-```
-
-## How to build for production / homework delivery
-
-```shell
-./open-node.sh
-# (here you're inside the container)
-yarn run build-prod
-```
-
-For "Web and Software Architecture" students: before committing and pushing your work for grading, please read the section below named "My build works when I use `yarn run dev`, however there is a Javascript crash in production/grading"
-
-## Known issues
-
-### My build works when I use `yarn run dev`, however there is a Javascript crash in production/grading
-
-Some errors in the code are somehow not shown in `vite` development mode. To preview the code that will be used in production/grading settings, use the following commands:
-
-```shell
-./open-node.sh
-# (here you're inside the container)
-yarn run build-prod
-yarn run preview
+docker compose up -d
 ```
 
 ## License
